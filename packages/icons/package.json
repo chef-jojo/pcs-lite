@@ -1,0 +1,17 @@
+{
+  "name": "@pcs/icons",
+  "version": "1.0.0",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.tsx --format esm,cjs --dts --external react",
+    "dev": "tsup src/index.tsx --format esm,cjs --watch --dts --external react",
+    "generate-icons": "svgr --template ./scripts/generate-icons.js --index-template ./scripts/generate-icons-index.js --ext tsx --icon --filename-case 'kebab' --ref -d ./src ./svgs",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist"
+  },
+  "devDependencies": {
+    "@svgr/cli": "6.1.2",
+    "tsup": "^5.10.1"
+  }
+}

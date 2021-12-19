@@ -1,22 +1,25 @@
 {
-  "name": "turborepo-basic",
+  "name": "pcs-re",
   "version": "0.0.0",
   "private": true,
   "workspaces": [
-    "apps/*",
+    "app",
     "packages/*"
   ],
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev --parallel",
     "lint": "turbo run lint",
-    "format": "prettier --write '**/*.{ts,tsx,.md}'"
+    "format": "prettier --write '**/*.{ts,tsx,.md}'",
+    "clean": "turbo run clean && rm -rf node_modules"
   },
   "devDependencies": {
     "prettier": "^2.5.1",
-    "turbo": "latest"
+    "turbo": "latest",
+    "typescript": "^4.5.3"
   },
   "turbo": {
+    "baseBranch": "origin/main",
     "pipeline": {
       "build": {
         "dependsOn": [
@@ -31,6 +34,9 @@
         "outputs": []
       },
       "dev": {
+        "cache": false
+      },
+      "clean": {
         "cache": false
       }
     }
