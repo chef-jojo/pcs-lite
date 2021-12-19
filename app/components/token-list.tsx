@@ -1,21 +1,21 @@
 import {
   Currency,
-  CurrencyAmount,
+  currencyEquals,
   Token,
   TokenAmount,
 } from '@pancakeswap/sdk';
+import { Box, Flex, styled, Text } from '@pcs/ui';
 import { TokenInfo } from '@uniswap/token-lists';
 import { useMemo, useState } from 'react';
-import { Box, Flex } from '@pcs/ui';
+import useDebounce from '~/hooks/use-debounce';
 import {
   useAllTokens,
   useTokenBalances,
   useTokenBalanceSWR,
   useTokenSWR,
 } from '~/hooks/use-token';
-import useDebounce from '~/hooks/use-debounce';
-import { useActiveWeb3React } from '~/hooks/use-web3';
 import { isAddress } from '~/utils/is-address';
+import CurrencyLogo from './logo/CurrencyLogo';
 
 /**
  * Create a filter function to apply to a token for whether it matches a particular search query
@@ -183,7 +183,11 @@ export function useSortedTokensByQuery(
 
 export function CurrencyList({
   onSelect,
+  selectedCurrency,
+  otherCurrency,
 }: {
+  selectedCurrency: Currency;
+  otherCurrency: Currency;
   onSelect: (currency: Currency) => void;
 }) {
   const allTokens = useAllTokens();
@@ -215,34 +219,83 @@ export function CurrencyList({
   );
 
   return (
-    <div>
+    <Box css={{ overflow: 'scroll', height: '390px' }}>
       {filteredSortedTokens.map((token) => {
         return (
           <CurrencyListItem
             onSelect={onSelect}
             key={token.address}
+            selectedCurrency={selectedCurrency}
+            otherCurrency={otherCurrency}
             token={token}
           />
         );
       })}
-    </div>
+    </Box>
   );
 }
+
+const StyledItem = styled('div', {
+  padding: '4px 20px',
+  height: 56,
+  display: 'grid',
+  alignItems: 'center',
+  gridTemplateColumns: 'auto minmax(auto, 1fr) minmax(0, 72px)',
+  gap: '$2',
+  variants: {
+    selected: {
+      true: {
+        opacity: 0.5,
+      },
+    },
+    disabled: {
+      true: {
+        pointerEvents: 'none',
+        opacity: 0.5,
+      },
+      false: {
+        cursor: 'pointer',
+        '&:hover': {
+          bc: '$background',
+        },
+      },
+    },
+  },
+});
 
 function CurrencyListItem({
   token,
   onSelect,
+  selectedCurrency,
+  otherCurrency,
 }: {
   token: Token;
+  selectedCurrency: Currency;
+  otherCurrency: Currency;
   onSelect: (currency: Currency) => void;
 }) {
   const { data: balance } = useTokenBalanceSWR(token);
+  const isSelected = Boolean(
+    selectedCurrency && currencyEquals(selectedCurrency, token),
+  );
+  const otherSelected = Boolean(
+    otherCurrency && currencyEquals(otherCurrency, token),
+  );
+
   return (
-    <Flex justify="between" onClick={() => onSelect(token)}>
-      <Box>
-        <Box>{token.symbol}</Box>
+    <StyledItem
+      onClick={() => onSelect(token)}
+      disabled={otherSelected}
+      selected={isSelected}
+    >
+      <CurrencyLogo currency={token} />
+      <Box css={{ textAlign: 'left' }}>
+        <Text>{token.symbol}</Text>
+        <Text>{token.name}</Text>
       </Box>
-      {balance?.toSignificant(6)}
-    </Flex>
+      <Flex css={{ justifySelf: 'flex-end' }}>
+        <Text>{balance?.toSignificant(6)}</Text>
+      </Flex>
+    </StyledItem>
   );
 }

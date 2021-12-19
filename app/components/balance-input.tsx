@@ -56,15 +56,18 @@ function useModal() {
 
 export const CurrencyBalance: FC<{
   $currencyAddress: InputCurrencyAtom;
-}> = ({ $currencyAddress }) => {
+  $otherCurrencyAddress: InputCurrencyAtom;
+}> = ({ $currencyAddress, $otherCurrencyAddress }) => {
   const [address, setAddress] = useAtom($currencyAddress);
+  const [orderAddress] = useAtom($otherCurrencyAddress);
   const currency = useCurrency(address);
+  const otherCurrency = useCurrency(orderAddress);
   const { data, isValidating, error } = useCurrencyBalance(currency);
   const modal = useModal();
 
   return (
     <Flex align="end" justify="between" css={{ px: '$2' }}>
-      {currency ? (
+      {currency && otherCurrency ? (
         <Modal {...modal}>
           <ModalTrigger asChild>
             <Button size="xs" variant="text" css={{ color: '$text' }}>
@@ -73,6 +76,8 @@ export const CurrencyBalance: FC<{
           </ModalTrigger>
           <ModalContent>
             <CurrencyList
+              otherCurrency={otherCurrency}
+              selectedCurrency={currency}
               onSelect={(selectedCurrency) => {
                 setAddress(
                   isCurrencyToken(selectedCurrency)

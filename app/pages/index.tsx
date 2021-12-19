@@ -1,10 +1,9 @@
-import { Token, Trade } from '@pancakeswap/sdk';
+import { Trade } from '@pancakeswap/sdk';
 import { SwapIcon } from '@pcs/icons';
 import { Box, Button, Flex, Grid, IconButton, Text } from '@pcs/ui';
-import { TokenList } from '@uniswap/token-lists';
 import { useAtom } from 'jotai';
-import type { GetStaticProps, NextPage } from 'next';
-import { useCallback, useMemo, useState } from 'react';
+import type { NextPage } from 'next';
+import { useCallback, useState } from 'react';
 import {
   BalanceInput,
   CurrencyBalance,
@@ -13,7 +12,7 @@ import {
   $slippage,
   SettingModal,
 } from '~/components/settings/settings-modal';
-import { useSwapCallback } from '~/components/swap/hooks/useSwapCallback';
+import confirmPriceImpactWithoutFee from '~/components/swap/confirmPriceImpactWithoutFee';
 import {
   $inputCurrency,
   $outputCurrency,
@@ -22,19 +21,16 @@ import {
   useSwapCurrency,
   useUserInputChange,
 } from '~/components/swap/hooks/use-swap-info';
+import { useSwapCallback } from '~/components/swap/hooks/useSwapCallback';
 import TradePrice from '~/components/swap/trade-price';
 import { Field } from '~/components/swap/type';
 import { INITIAL_ALLOWED_SLIPPAGE } from '~/config/constants';
-import DEFAULT_TOKEN_LIST from '~/config/default-token-list.json';
-import { listToTokenMap, LIST_BY_URL } from '~/config/list';
-import { useActiveWeb3React } from '~/hooks/use-web3';
+import { useTranslation } from '~/hooks/useTranslation';
+import { $userIsExpertMode } from '~/state/user';
 import {
   computeTradePriceBreakdown,
   warningSeverity,
 } from '~/utils/price';
-import { useTranslation } from '~/hooks/useTranslation';
-import confirmPriceImpactWithoutFee from '~/components/swap/confirmPriceImpactWithoutFee';
-import { $userIsExpertMode } from '~/state/user';
 
 const Home: NextPage = () => {
   useQueryParametersToSwapState();
@@ -42,7 +38,7 @@ const Home: NextPage = () => {
   const [outputCurrency, setOutputCurrency] =
     useAtom($outputCurrency);
 
-  const { independentField } = useSwapCurrency();
+  const { independentField, typedValue } = useSwapCurrency();
   const {
     parsedAmount,
     v2Trade: trade,
@@ -81,6 +77,9 @@ const Home: NextPage = () => {
 
   const { callback: swapCallback, error: swapCallbackError } =
     useSwapCallback(trade, allowedSlippage);
+
+  const dependentField: Field =
+    independentField === Field.INPUT ? Field.OUTPUT : Field.INPUT;
 
   // modal and loading
   const [
@@ -133,6 +132,13 @@ const Home: NextPage = () => {
       });
   }, [priceImpactWithoutFee, swapCallback, tradeToConfirm, t]);
 
+  const formattedAmounts = {
+    [independentField]: typedValue,
+    [dependentField]: showWrap
+      ? parsedAmounts[independentField]?.toExact() ?? ''
+      : parsedAmounts[dependentField]?.toSignificant(6) ?? '',
+  };
+
   return (
     <Flex
       justify="center"
@@ -170,9 +176,12 @@ const Home: NextPage = () => {
           }}
         />
         <Grid gap="2">
-          <CurrencyBalance $currencyAddress={$inputCurrency} />
+          <CurrencyBalance
+            $currencyAddress={$inputCurrency}
+            $otherCurrencyAddress={$outputCurrency}
+          />
           <BalanceInput
-            value={parsedAmounts['INPUT']?.toSignificant(6) ?? ''}
+            value={formattedAmounts[Field.INPUT]}
             onValueChange={onInputChange}
           />
         </Grid>
@@ -186,9 +195,12 @@ const Home: NextPage = () => {
           <SwapIcon />
         </IconButton>
         <Grid gap="2">
-          <CurrencyBalance $currencyAddress={$outputCurrency} />
+          <CurrencyBalance
+            $currencyAddress={$outputCurrency}
+            $otherCurrencyAddress={$inputCurrency}
+          />
           <BalanceInput
-            value={parsedAmounts['OUTPUT']?.toSignificant(6) ?? ''}
+            value={formattedAmounts[Field.OUTPUT]}
             onValueChange={onOutputChange}
           />
         </Grid>
