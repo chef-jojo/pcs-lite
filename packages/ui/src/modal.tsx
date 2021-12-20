@@ -78,3 +78,4 @@ export const ModalTrigger = DialogPrimitive.Trigger;
 export const ModalClose = DialogPrimitive.Close;
 export const ModalTitle = DialogPrimitive.Title;
 export const ModalDescription = DialogPrimitive.Description;
+export const ModalPortal = DialogPrimitive.Portal;

@@ -32,7 +32,7 @@ const getTokenListValidator = (() => {
  * @param listUrl list url
  * @param resolveENSContentHash resolves an ens name to a contenthash
  */
-export default async function getTokenList(
+export async function getTokenList(
   listUrl: string,
   resolveENSContentHash: (ensName: string) => Promise<string>,
 ): Promise<TokenList> {

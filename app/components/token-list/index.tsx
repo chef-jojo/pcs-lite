@@ -4,18 +4,22 @@ import {
   Token,
   TokenAmount,
 } from '@pancakeswap/sdk';
-import { Box, Flex, styled, Text } from '@pcs/ui';
+import { Box, Button, Flex, styled, Text } from '@pcs/ui';
 import { TokenInfo } from '@uniswap/token-lists';
-import { useMemo, useState } from 'react';
+import { atom, useAtom } from 'jotai';
+import { useUpdateAtom } from 'jotai/utils';
+import { useEffect, useMemo, useState } from 'react';
 import useDebounce from '~/hooks/use-debounce';
 import {
-  useAllTokens,
   useTokenBalances,
   useTokenBalanceSWR,
   useTokenSWR,
 } from '~/hooks/use-token';
+import { useAllTokens } from '~/hooks/useTokenList';
+import { useTranslation } from '~/hooks/useTranslation';
 import { isAddress } from '~/utils/is-address';
-import CurrencyLogo from './logo/CurrencyLogo';
+import CurrencyLogo from '../logo/CurrencyLogo';
+import { ManageList } from './manage';
 
 /**
  * Create a filter function to apply to a token for whether it matches a particular search query
@@ -181,6 +185,47 @@ export function useSortedTokensByQuery(
   }, [tokens, searchQuery]);
 }
 
+enum CurrencyModalView {
+  search,
+  manage,
+  importToken,
+  importList,
+}
+
+const $currencyModalView = atom(CurrencyModalView.search);
+
+export function CurrencySearch({
+  onSelect,
+  selectedCurrency,
+  otherCurrency,
+}: {
+  selectedCurrency: Currency;
+  otherCurrency: Currency;
+  onSelect: (currency: Currency) => void;
+}) {
+  const [view, setView] = useAtom($currencyModalView);
+
+  useEffect(() => {
+    setView(CurrencyModalView.search);
+  }, []);
+
+  switch (view) {
+    case CurrencyModalView.search:
+      return (
+        <CurrencyList
+          onSelect={onSelect}
+          selectedCurrency={selectedCurrency}
+          otherCurrency={otherCurrency}
+        />
+      );
+
+    case CurrencyModalView.manage:
+      return <ManageList />;
+    default:
+      return null;
+  }
+}
+
 export function CurrencyList({
   onSelect,
   selectedCurrency,
@@ -191,6 +236,7 @@ export function CurrencyList({
   onSelect: (currency: Currency) => void;
 }) {
   const allTokens = useAllTokens();
+  const setModalView = useUpdateAtom($currencyModalView);
 
   const [searchQuery, setSearchQuery] = useState<string>('');
   const debouncedQuery = useDebounce(searchQuery, 200);
@@ -218,20 +264,32 @@ export function CurrencyList({
     debouncedQuery,
   );
 
+  const { t } = useTranslation();
+
   return (
-    <Box css={{ overflow: 'scroll', height: '390px' }}>
-      {filteredSortedTokens.map((token) => {
-        return (
-          <CurrencyListItem
-            onSelect={onSelect}
-            key={token.address}
-            selectedCurrency={selectedCurrency}
-            otherCurrency={otherCurrency}
-            token={token}
-          />
-        );
-      })}
-    </Box>
+    <>
+      <Box css={{ overflow: 'scroll', height: '390px' }}>
+        {filteredSortedTokens.map((token) => {
+          return (
+            <CurrencyListItem
+              onSelect={onSelect}
+              key={token.address}
+              selectedCurrency={selectedCurrency}
+              otherCurrency={otherCurrency}
+              token={token}
+            />
+          );
+        })}
+      </Box>
+      <Button
+        size="sm"
+        variant="text"
+        onClick={() => setModalView(CurrencyModalView.manage)}
+        className="list-token-manage-button"
+      >
+        {t('Manage Tokens')}
+      </Button>
+    </>
   );
 }
 

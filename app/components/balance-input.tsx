@@ -6,6 +6,7 @@ import {
   Modal,
   ModalContent,
   ModalTrigger,
+  ModalPortal,
   NumberInput,
   NumberInputProps,
   styled,
@@ -18,7 +19,7 @@ import {
   useCurrency,
   useCurrencyBalance,
 } from '~/hooks/use-currency';
-import { CurrencyList } from './token-list';
+import { CurrencyList, CurrencySearch } from './token-list';
 
 const Input = styled(UIInput, {
   appearance: 'none',
@@ -75,7 +76,7 @@ export const CurrencyBalance: FC<{
             </Button>
           </ModalTrigger>
           <ModalContent>
-            <CurrencyList
+            <CurrencySearch
               otherCurrency={otherCurrency}
               selectedCurrency={currency}
               onSelect={(selectedCurrency) => {
