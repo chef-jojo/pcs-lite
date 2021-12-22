@@ -1,3 +1,5 @@
+import { Percent } from '@pancakeswap/sdk';
+import { SettingIcon } from '@pcs/icons';
 import {
   Button,
   Flex,
@@ -6,14 +8,10 @@ import {
   Modal,
   ModalContent,
   ModalTrigger,
-  NumberInput,
   Text,
 } from '@pcs/ui';
-import { SettingIcon } from '@pcs/icons';
-import { useState } from 'react';
 import { atom, useAtom } from 'jotai';
 import { INITIAL_ALLOWED_SLIPPAGE } from '~/config/constants';
-import { Percent } from '@pancakeswap/sdk';
 
 const slippages = [0.1, 0.5, 1.0];
 const isValid = (slippage: number) =>

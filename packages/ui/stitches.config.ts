@@ -54,6 +54,8 @@ export const {
       textDisabled: '#BDC2C4',
       textSubtle: '#7A6EAA',
       disabled: '#E9EAEB',
+      inverseBackgroundAlt: '#27262c',
+      inverseText: '#F4EEFF',
       ...linearGradient,
     },
     space: {

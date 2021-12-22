@@ -1,3 +1,1 @@
-Not official
-
-**DO NOT USE FOR REAL TRADE**
+playground for experiment and testnet compatible.

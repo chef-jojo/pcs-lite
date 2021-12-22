@@ -1,9 +1,18 @@
 import { ChainId } from '@pancakeswap/sdk';
 import { ethers } from 'ethers';
 import {
+  REACT_APP_NODE_1,
+  REACT_APP_NODE_2,
+  REACT_APP_NODE_3,
   REACT_APP_NODE_PRODUCTION,
   REACT_APP_TESTNET_NODE,
 } from '~/config/env';
+
+export const nodes = [
+  REACT_APP_NODE_1,
+  REACT_APP_NODE_2,
+  REACT_APP_NODE_3,
+];
 
 export let rpcProvider: ethers.providers.JsonRpcProvider;
 export const lastChainId = ChainId.MAINNET;

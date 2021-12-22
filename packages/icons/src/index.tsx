@@ -1,6 +1,12 @@
+export { default as ArrowDownIcon } from "./arrow-down";
+export { default as ArrowUpIcon } from "./arrow-up";
 export { default as AutoRenewIcon } from "./auto-renew";
 export { default as BinanceIcon } from "./binance";
 export { default as CloseIcon } from "./close";
+export { default as ErrorIcon } from "./error";
 export { default as HelpIcon } from "./help";
+export { default as MetamaskIcon } from "./metamask";
+export { default as PanIcon } from "./pan";
 export { default as SettingIcon } from "./setting";
+export { default as SmallPancakeIcon } from "./small-pancake";
 export { default as SwapIcon } from "./swap";

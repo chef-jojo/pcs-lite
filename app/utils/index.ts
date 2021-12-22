@@ -64,9 +64,7 @@ export function getBscScanLinkForNft(
 
 // add 10%
 export function calculateGasMargin(value: BigNumber): BigNumber {
-  return value
-    .mul(BigNumber.from(10000).add(BigNumber.from(1000)))
-    .div(BigNumber.from(10000));
+  return value.mul(110).div(100);
 }
 
 // converts a basis points value to a sdk percent

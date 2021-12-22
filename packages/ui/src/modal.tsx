@@ -1,18 +1,18 @@
 import React from 'react';
 import { styled, CSS } from '../stitches.config';
-import * as DialogPrimitive from '@radix-ui/react-dialog';
+import * as ModalPrimitive from '@radix-ui/react-dialog';
 import { CloseIcon } from '@pcs/icons';
 import { overlayStyles } from './overlay';
 import { cardStyles } from './card';
 import { IconButton } from './icon-button';
 
 type DialogProps = React.ComponentProps<
-  typeof DialogPrimitive.Root
+  typeof ModalPrimitive.Root
 > & {
   children: React.ReactNode;
 };
 
-const StyledOverlay = styled(DialogPrimitive.Overlay, overlayStyles, {
+const StyledOverlay = styled(ModalPrimitive.Overlay, overlayStyles, {
   position: 'fixed',
   top: 0,
   right: 0,
@@ -22,14 +22,14 @@ const StyledOverlay = styled(DialogPrimitive.Overlay, overlayStyles, {
 
 export function Modal({ children, ...props }: DialogProps) {
   return (
-    <DialogPrimitive.Root {...props}>
+    <ModalPrimitive.Root {...props}>
       <StyledOverlay />
       {children}
-    </DialogPrimitive.Root>
+    </ModalPrimitive.Root>
   );
 }
 
-const StyledContent = styled(DialogPrimitive.Content, cardStyles, {
+const StyledContent = styled(ModalPrimitive.Content, cardStyles, {
   position: 'fixed',
   top: '50%',
   left: '50%',
@@ -49,14 +49,14 @@ const StyledContent = styled(DialogPrimitive.Content, cardStyles, {
   },
 });
 
-const StyledCloseButton = styled(DialogPrimitive.Close, {
+const StyledCloseButton = styled(ModalPrimitive.Close, {
   position: 'absolute',
   top: '$2',
   right: '$2',
 });
 
 type DialogContentPrimitiveProps = React.ComponentProps<
-  typeof DialogPrimitive.Content
+  typeof ModalPrimitive.Content
 >;
 type DialogContentProps = DialogContentPrimitiveProps & { css?: CSS };
 
@@ -74,8 +74,8 @@ export const ModalContent = React.forwardRef<
   </StyledContent>
 ));
 
-export const ModalTrigger = DialogPrimitive.Trigger;
-export const ModalClose = DialogPrimitive.Close;
-export const ModalTitle = DialogPrimitive.Title;
-export const ModalDescription = DialogPrimitive.Description;
-export const ModalPortal = DialogPrimitive.Portal;
+export const ModalTrigger = ModalPrimitive.Trigger;
+export const ModalClose = ModalPrimitive.Close;
+export const ModalTitle = ModalPrimitive.Title;
+export const ModalDescription = ModalPrimitive.Description;
+export const ModalPortal = ModalPrimitive.Portal;

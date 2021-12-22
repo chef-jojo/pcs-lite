@@ -162,7 +162,7 @@ function useTokensFromMap(
     }>((newMap, address) => {
       newMap[address] = tokenMap[chainId][address].token;
       return newMap;
-    }, {});
+    }, tokensByAddress);
 
     if (includeUserAdded) {
       return (
@@ -181,7 +181,13 @@ function useTokensFromMap(
     }
 
     return mapWithoutUrls;
-  }, [chainId, includeUserAdded, tokenMap, userAddedTokens]);
+  }, [
+    chainId,
+    includeUserAdded,
+    tokenMap,
+    tokensByAddress,
+    userAddedTokens,
+  ]);
 }
 
 // Get all tokens for the current chain by default tokens, user added tokens and user added urls

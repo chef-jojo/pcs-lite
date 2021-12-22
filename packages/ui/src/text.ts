@@ -1,6 +1,6 @@
-import { styled } from '../stitches.config';
+import { styled, css } from '../stitches.config';
 
-export const Text = styled('span', {
+export const textCss = css({
   // Reset
   lineHeight: '1',
   margin: '0',
@@ -53,4 +53,6 @@ export const Text = styled('span', {
   defaultVariants: {
     size: '3',
   },
-} as const);
+});
+
+export const Text = styled('span', textCss);
