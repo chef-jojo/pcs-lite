@@ -5,15 +5,16 @@ import { WrappedTokenInfo } from '~/config/list';
 import useHttpLocations from '../../hooks/useHttpLocations';
 import getTokenLogoURL from '../../utils/getTokenLogoURL';
 import Logo from './Logo';
+import { CSS } from '@pcs/ui';
 
 export default function CurrencyLogo({
   currency,
   size = '24px',
-  style,
+  css,
 }: {
   currency?: Currency;
   size?: string;
-  style?: React.CSSProperties;
+  css?: CSS;
 }) {
   const uriLocations = useHttpLocations(
     currency instanceof WrappedTokenInfo
@@ -34,7 +35,7 @@ export default function CurrencyLogo({
   }, [currency, uriLocations]);
 
   if (currency === ETHER) {
-    return <BinanceIcon width={size} style={style} />;
+    return <BinanceIcon width={size} css={css} />;
   }
 
   return (
@@ -43,7 +44,7 @@ export default function CurrencyLogo({
       height={size}
       srcs={srcs}
       alt={`${currency?.symbol ?? 'token'} logo`}
-      style={style}
+      css={css}
     />
   );
 }

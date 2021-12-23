@@ -65,6 +65,12 @@ export function useTokenListSWR() {
 
       return listByUrls;
     },
+    {
+      revalidateIfStale: false,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      refreshInterval: 60 * 1000 * 10,
+    },
   );
 }
 
@@ -142,14 +148,18 @@ function useTokensFromMap(
   const { chainId } = useActiveWeb3React();
   const [userAddedTokens] = useAtom($userAddedTokenByChain);
 
-  const defaultTokens = getTokens(chainId);
-  let tokensByAddress: {
-    [address: string]: Token;
-  } = {};
-  for (const key in defaultTokens) {
-    const token = defaultTokens[key as keyof typeof defaultTokens];
-    tokensByAddress[token.address] = token;
-  }
+  const tokensByAddress = useMemo(() => {
+    let _tokensByAddress: {
+      [address: string]: Token;
+    } = {};
+    const defaultTokens = getTokens(chainId);
+
+    for (const key in defaultTokens) {
+      const token = defaultTokens[key as keyof typeof defaultTokens];
+      _tokensByAddress[token.address] = token;
+    }
+    return _tokensByAddress;
+  }, [chainId]);
 
   return useMemo(() => {
     if (!chainId) return {};

@@ -4,10 +4,11 @@ import useSWR from 'swr';
 import useSWRImmutable from 'swr/immutable';
 import { getContract } from '~/utils/contract-helper';
 import { isAddress } from '~/utils/is-address';
-import { Call, multicall } from '~/utils/multicall';
+import { Call } from '~/utils/multicall';
 import { getRpcProvider } from '~/utils/rpc';
 import ERC20_ABI from '../config/abi/erc20.json';
 import { useActiveWeb3React } from './use-web3';
+import { useMultiCall } from './useSWRContract';
 import { useAllTokens } from './useTokenList';
 
 const getToken = async (chainId: ChainId, tokenAddress: string) => {
@@ -84,33 +85,29 @@ export function useTokenBalances(tokens?: Token[]) {
     [tokens],
   );
 
-  const res = useSWR(
-    account && validatedTokens ? [account, validatedTokens] : null,
-    async (_account, _validatedTokens) => {
-      const calls: Call[] = _validatedTokens.map((token) => ({
-        address: token.address,
-        name: 'balanceOf',
-        params: [_account],
-      }));
-      const res = await multicall(
-        ERC20_ABI,
-        calls,
-        undefined,
-        chainId,
-      );
-      return _validatedTokens.reduce<{
-        [tokenAddress: string]: TokenAmount | undefined;
-      }>((memo, token, i) => {
-        const value = res[i]?.balance;
-        const amount = value
-          ? JSBI.BigInt(value.toString())
-          : undefined;
-        if (amount) {
-          memo[token.address] = new TokenAmount(token, amount);
-        }
-        return memo;
-      }, {});
-    },
+  const calls: Call[] = validatedTokens.map((token) => ({
+    address: token.address,
+    name: 'balanceOf',
+    params: [account],
+  }));
+  const multiRes = useMultiCall(
+    ERC20_ABI,
+    account && validatedTokens ? calls : null,
   );
-  return res;
+
+  const data = validatedTokens.reduce<{
+    [tokenAddress: string]: TokenAmount | undefined;
+  }>((memo, token, i) => {
+    const value = multiRes?.data?.[i]?.balance;
+    const amount = value ? JSBI.BigInt(value.toString()) : undefined;
+    if (amount) {
+      memo[token.address] = new TokenAmount(token, amount);
+    }
+    return memo;
+  }, {});
+
+  return {
+    ...multiRes,
+    data,
+  };
 }

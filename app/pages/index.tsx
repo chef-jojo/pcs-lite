@@ -4,6 +4,7 @@ import { Box, Button, Flex, Grid, IconButton, Text } from '@pcs/ui';
 import { useAtom } from 'jotai';
 import type { NextPage } from 'next';
 import { useCallback, useEffect, useState } from 'react';
+import { useSWRConfig } from 'swr';
 import {
   BalanceInput,
   CurrencyBalance,
@@ -28,6 +29,7 @@ import { useApproveCallbackFromTrade } from '~/components/swap/hooks/useApproveC
 import { useSwapCallback } from '~/components/swap/hooks/useSwapCallback';
 import TradePrice from '~/components/swap/trade-price';
 import { Field } from '~/components/swap/type';
+import { useAllTokenBalances } from '~/components/token-list';
 import { INITIAL_ALLOWED_SLIPPAGE } from '~/config/constants';
 import { ApprovalState } from '~/hooks/useApproveCallback';
 import { useTranslation } from '~/hooks/useTranslation';
@@ -202,14 +204,20 @@ const Home: NextPage = () => {
     txHash,
   ]);
 
+  const { cache, mutate, ...extraConfig } = useSWRConfig();
+
   return (
-    <Box>
+    <Box
+      css={{
+        height: '100vh',
+      }}
+    >
       <Menu />
       <Flex
         justify="center"
         css={{
+          height: '100%',
           p: '24px 24px 0px',
-          height: '100vh',
           background: '$bubblegum',
         }}
       >

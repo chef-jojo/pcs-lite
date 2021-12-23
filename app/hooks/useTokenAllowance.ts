@@ -9,10 +9,13 @@ function useTokenAllowance(
   spender?: string,
 ): TokenAmount | undefined {
   const contract = useTokenContract(token?.address, false);
-  const { data } = useSWRContract(contract, 'allowance', [
-    owner,
-    spender,
-  ]);
+  const enable = !!contract && !!owner && !!spender && !!token;
+  const { data } = useSWRContract(
+    contract,
+    'allowance',
+    [owner, spender],
+    enable,
+  );
 
   return useMemo(
     () =>

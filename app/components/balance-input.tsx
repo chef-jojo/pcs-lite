@@ -75,7 +75,7 @@ export const CurrencyBalance: FC<{
               {currency.symbol}
             </Button>
           </ModalTrigger>
-          <ModalContent>
+          <ModalContent css={{ width: '100%', maxWidth: '420px' }}>
             <CurrencySearch
               otherCurrency={otherCurrency}
               selectedCurrency={currency}

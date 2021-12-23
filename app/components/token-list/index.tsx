@@ -1,14 +1,19 @@
 import {
   Currency,
   currencyEquals,
+  ETHER,
   Token,
   TokenAmount,
 } from '@pancakeswap/sdk';
+import {
+  FixedSizeList as List,
+  ListChildComponentProps,
+} from 'react-window';
 import { Box, Button, Flex, styled, Text } from '@pcs/ui';
 import { TokenInfo } from '@uniswap/token-lists';
 import { atom, useAtom } from 'jotai';
 import { useUpdateAtom } from 'jotai/utils';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import useDebounce from '~/hooks/use-debounce';
 import {
   useTokenBalances,
@@ -226,6 +231,14 @@ export function CurrencySearch({
   }
 }
 
+function currencyKey(currency: Currency): string {
+  return currency instanceof Token
+    ? currency.address
+    : currency === ETHER
+    ? 'ETHER'
+    : '';
+}
+
 export function CurrencyList({
   onSelect,
   selectedCurrency,
@@ -266,20 +279,47 @@ export function CurrencyList({
 
   const { t } = useTranslation();
 
+  const Row = useCallback(
+    ({ data, index, style }: ListChildComponentProps<Token[]>) => {
+      const token = data[index];
+      const isSelected = Boolean(
+        selectedCurrency && currencyEquals(selectedCurrency, token),
+      );
+      const otherSelected = Boolean(
+        otherCurrency && currencyEquals(otherCurrency, token),
+      );
+      return (
+        <StyledItem
+          onClick={() => onSelect(token)}
+          disabled={otherSelected}
+          selected={isSelected}
+          style={style}
+        >
+          <CurrencyListItem key={token.address} token={token} />
+        </StyledItem>
+      );
+    },
+    [onSelect, otherCurrency, selectedCurrency],
+  );
+
   return (
     <>
-      <Box css={{ overflow: 'scroll', height: '390px' }}>
-        {filteredSortedTokens.map((token) => {
-          return (
-            <CurrencyListItem
-              onSelect={onSelect}
-              key={token.address}
-              selectedCurrency={selectedCurrency}
-              otherCurrency={otherCurrency}
-              token={token}
-            />
-          );
-        })}
+      <Box
+        css={{
+          overflow: 'scroll',
+          height: '390px',
+        }}
+      >
+        <List
+          height={390}
+          width="100%"
+          itemData={filteredSortedTokens}
+          itemCount={filteredSortedTokens.length}
+          itemSize={56}
+          itemKey={(index, item) => currencyKey(item[index])}
+        >
+          {Row}
+        </List>
       </Box>
       <Button
         size="sm"
@@ -321,39 +361,29 @@ const StyledItem = styled('div', {
   },
 });
 
-function CurrencyListItem({
-  token,
-  onSelect,
-  selectedCurrency,
-  otherCurrency,
-}: {
-  token: Token;
-  selectedCurrency: Currency;
-  otherCurrency: Currency;
-  onSelect: (currency: Currency) => void;
-}) {
-  const { data: balance } = useTokenBalanceSWR(token);
-  const isSelected = Boolean(
-    selectedCurrency && currencyEquals(selectedCurrency, token),
-  );
-  const otherSelected = Boolean(
-    otherCurrency && currencyEquals(otherCurrency, token),
-  );
+function CurrencyListItem({ token }: { token: Token }) {
+  const { data: balance, isValidating } = useTokenBalanceSWR(token);
 
   return (
-    <StyledItem
-      onClick={() => onSelect(token)}
-      disabled={otherSelected}
-      selected={isSelected}
-    >
+    <>
       <CurrencyLogo currency={token} />
       <Box css={{ textAlign: 'left' }}>
         <Text>{token.symbol}</Text>
         <Text>{token.name}</Text>
       </Box>
-      <Flex css={{ justifySelf: 'flex-end' }}>
-        <Text>{balance?.toSignificant(6)}</Text>
+      <Flex
+        css={{
+          justifySelf: 'flex-end',
+        }}
+      >
+        <Text
+          style={{
+            opacity: isValidating ? 0.6 : 1,
+          }}
+        >
+          {balance?.toSignificant(6)}
+        </Text>
       </Flex>
-    </StyledItem>
+    </>
   );
 }

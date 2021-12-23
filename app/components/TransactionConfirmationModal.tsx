@@ -142,13 +142,13 @@ export function ConfirmationModalContent({
   bottomContent,
   topContent,
 }: {
-  topContent: () => React.ReactNode;
-  bottomContent: () => React.ReactNode;
+  topContent: React.ReactNode;
+  bottomContent: React.ReactNode;
 }) {
   return (
     <Wrapper>
-      <Box>{topContent()}</Box>
-      <Box>{bottomContent()}</Box>
+      <Box>{topContent}</Box>
+      <Box>{bottomContent}</Box>
     </Wrapper>
   );
 }
@@ -174,9 +174,7 @@ export function TransactionErrorContent({
       </Grid>
 
       <Flex justify="center" css={{ pt: '24px' }}>
-        {/* <AlertModalCancel asChild> */}
         <Button onClick={onDismiss}>{t('Dismiss')}</Button>
-        {/* </AlertModalCancel> */}
       </Flex>
     </Wrapper>
   );
@@ -186,7 +184,6 @@ interface ConfirmationModalProps {
   title: string;
   customOnDismiss?: () => void;
   hash: string | undefined;
-  content: () => React.ReactNode;
   attemptingTxn: boolean;
   pendingText: string;
   currencyToAdd?: Currency | undefined;
@@ -200,7 +197,7 @@ const TransactionConfirmationModal: React.FC<
   attemptingTxn,
   hash,
   pendingText,
-  content,
+  children,
   currencyToAdd,
   ...props
 }) => {
@@ -222,7 +219,7 @@ const TransactionConfirmationModal: React.FC<
             currencyToAdd={currencyToAdd}
           />
         ) : (
-          content()
+          children
         )}
       </ModalContent>
     </Modal>

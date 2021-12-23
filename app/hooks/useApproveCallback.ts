@@ -88,7 +88,7 @@ export function useApproveCallback(
 
     const estimatedGas = await tokenContract.estimateGas
       .approve(spender, MaxUint256)
-      .catch(() => {
+      .catch((err) => {
         // general fallback for tokens who restrict approval amounts
         useExact = true;
         return tokenContract.estimateGas.approve(

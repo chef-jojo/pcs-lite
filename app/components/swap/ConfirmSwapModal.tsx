@@ -1,12 +1,12 @@
-import React, { ComponentProps, useCallback, useMemo } from 'react';
 import { currencyEquals, Trade } from '@pancakeswap/sdk';
+import React, { ComponentProps, useMemo } from 'react';
+import { useTranslation } from '~/hooks/useTranslation';
 import TransactionConfirmationModal, {
   ConfirmationModalContent,
   TransactionErrorContent,
 } from '../TransactionConfirmationModal';
 import SwapModalFooter from './SwapModalFooter';
 import SwapModalHeader from './SwapModalHeader';
-import { useTranslation } from '~/hooks/useTranslation';
 
 /**
  * Returns true if the trade requires a confirmation of details before we can submit it
@@ -46,7 +46,7 @@ interface ConfirmSwapModalProps {
 
 const ConfirmSwapModal: React.FC<
   ConfirmSwapModalProps &
-    ComponentProps<typeof TransactionConfirmationModal>
+    Omit<ComponentProps<typeof TransactionConfirmationModal>, 'title'>
 > = ({
   trade,
   originalTrade,
@@ -72,42 +72,6 @@ const ConfirmSwapModal: React.FC<
 
   const { t } = useTranslation();
 
-  const modalHeader = useCallback(() => {
-    return trade ? (
-      <SwapModalHeader
-        trade={trade}
-        allowedSlippage={allowedSlippage}
-        recipient={recipient}
-        showAcceptChanges={showAcceptChanges}
-        onAcceptChanges={onAcceptChanges}
-      />
-    ) : null;
-  }, [
-    allowedSlippage,
-    onAcceptChanges,
-    recipient,
-    showAcceptChanges,
-    trade,
-  ]);
-
-  const modalBottom = useCallback(() => {
-    return trade ? (
-      <SwapModalFooter
-        onConfirm={onConfirm}
-        trade={trade}
-        disabledConfirm={showAcceptChanges}
-        swapErrorMessage={swapErrorMessage}
-        allowedSlippage={allowedSlippage}
-      />
-    ) : null;
-  }, [
-    allowedSlippage,
-    onConfirm,
-    showAcceptChanges,
-    swapErrorMessage,
-    trade,
-  ]);
-
   // text to show while loading
   const pendingText = t(
     'Swapping %amountA% %symbolA% for %amountB% %symbolB%',
@@ -119,34 +83,48 @@ const ConfirmSwapModal: React.FC<
     },
   );
 
-  const confirmationContent = useCallback(
-    () =>
-      swapErrorMessage ? (
+  return (
+    <TransactionConfirmationModal
+      {...props}
+      title={t('Confirm Swap')}
+      customOnDismiss={customOnDismiss}
+      attemptingTxn={attemptingTxn}
+      hash={txHash}
+      pendingText={pendingText}
+      currencyToAdd={trade?.outputAmount.currency}
+    >
+      {swapErrorMessage ? (
         <TransactionErrorContent
           onDismiss={() => props.onOpenChange?.(false)}
           message={swapErrorMessage}
         />
       ) : (
         <ConfirmationModalContent
-          topContent={modalHeader}
-          bottomContent={modalBottom}
+          topContent={
+            trade && (
+              <SwapModalHeader
+                trade={trade}
+                allowedSlippage={allowedSlippage}
+                recipient={recipient}
+                showAcceptChanges={showAcceptChanges}
+                onAcceptChanges={onAcceptChanges}
+              />
+            )
+          }
+          bottomContent={
+            trade && (
+              <SwapModalFooter
+                onConfirm={onConfirm}
+                trade={trade}
+                disabledConfirm={showAcceptChanges}
+                swapErrorMessage={swapErrorMessage}
+                allowedSlippage={allowedSlippage}
+              />
+            )
+          }
         />
-      ),
-    [swapErrorMessage, modalHeader, modalBottom, props],
-  );
-
-  return (
-    <TransactionConfirmationModal
-      {...props}
-      title={t('Confirm Swap')}
-      // onDismiss={onDismiss}
-      customOnDismiss={customOnDismiss}
-      attemptingTxn={attemptingTxn}
-      hash={txHash}
-      content={confirmationContent}
-      pendingText={pendingText}
-      currencyToAdd={trade?.outputAmount.currency}
-    />
+      )}
+    </TransactionConfirmationModal>
   );
 };
 

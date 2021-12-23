@@ -35,7 +35,7 @@ export const multicall = async <T = any>(
   const res = returnData.map((call, i) => {
     const [result, data] = call;
     try {
-      return result
+      return result && data !== '0x'
         ? itf.decodeFunctionResult(calls[i].name, data)
         : null;
     } catch (error) {

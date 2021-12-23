@@ -1,13 +1,17 @@
 /* eslint-disable @next/next/no-img-element */
 import React, { useState } from 'react';
 import { HelpIcon } from '@pcs/icons';
+import { styled, CSS } from '@pcs/ui';
 
 const BAD_SRCS: { [tokenAddress: string]: true } = {};
 
 export interface LogoProps
   extends React.ImgHTMLAttributes<HTMLImageElement> {
   srcs: string[];
+  css?: CSS;
 }
+
+const Img = styled('img');
 
 /**
  * Renders an image by sequentially trying a list of URIs, and then eventually a fallback triangle alert
@@ -19,7 +23,7 @@ const Logo: React.FC<LogoProps> = ({ srcs, alt, ...rest }) => {
 
   if (src) {
     return (
-      <img
+      <Img
         {...rest}
         alt={alt}
         src={src}

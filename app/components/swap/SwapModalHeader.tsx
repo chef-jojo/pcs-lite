@@ -91,7 +91,9 @@ export default function SwapModalHeader({
           <CurrencyLogo
             currency={trade.inputAmount.currency}
             size="24px"
-            // style={{ marginRight: '12px' }}
+            css={{
+              mr: '12px',
+            }}
           />
           <Text
             // ellipsis
@@ -126,7 +128,9 @@ export default function SwapModalHeader({
           <CurrencyLogo
             currency={trade.outputAmount.currency}
             size="24px"
-            style={{ marginRight: '12px' }}
+            css={{
+              mr: '12px',
+            }}
           />
           <Text
             // ellipsis
@@ -164,7 +168,7 @@ export default function SwapModalHeader({
       <AutoColumn
         justify="start"
         gap="2"
-        style={{ padding: '24px 0 0 0px' }}
+        css={{ padding: '24px 0 0 0px' }}
       >
         <Text
           size="sm"
@@ -185,7 +189,7 @@ export default function SwapModalHeader({
         <AutoColumn
           justify="start"
           gap="2"
-          style={{ padding: '12px 0 0 0px' }}
+          css={{ padding: '12px 0 0 0px' }}
         >
           <Text color="textSubtle">
             {recipientSentToText}

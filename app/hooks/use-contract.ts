@@ -21,7 +21,7 @@ function useContract(
   ABI: any,
   withSignerIfPossible = true,
 ): Contract | null {
-  const { library, chainId } = useActiveWeb3React();
+  const { library, chainId, account } = useActiveWeb3React();
 
   return useMemo(() => {
     if (!address || !ABI || !library) return null;
@@ -29,13 +29,15 @@ function useContract(
       return getContract(
         ABI,
         address,
-        withSignerIfPossible ? library : getRpcProvider(chainId),
+        withSignerIfPossible && account
+          ? getProviderOrSigner(library, account)
+          : getRpcProvider(chainId),
       );
     } catch (error) {
       console.error('Failed to get contract', error);
       return null;
     }
-  }, [address, ABI, library, withSignerIfPossible, chainId]);
+  }, [address, ABI, library, withSignerIfPossible, account, chainId]);
 }
 
 export function useTokenContract(
