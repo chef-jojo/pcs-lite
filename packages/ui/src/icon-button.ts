@@ -24,10 +24,13 @@ export const IconButton = styled(
         md: {
           size: '48px',
           px: 0,
-          fontSize: '$3',
+          fontSize: '$4',
         },
       },
       variant: {
+        text: {
+          color: '$primary',
+        },
         light: {
           backgroundColor: '$input',
           color: '$textSubtle',
@@ -36,8 +39,8 @@ export const IconButton = styled(
       },
     },
     defaultVariants: {
-      size: 'sm',
-      variant: 'light',
+      size: 'md',
+      variant: 'text',
     },
   },
 );

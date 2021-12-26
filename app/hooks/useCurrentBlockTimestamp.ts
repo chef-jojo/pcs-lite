@@ -1,6 +1,4 @@
-import { BigNumber } from 'ethers';
 import useSWR from 'swr';
-import { multicall } from '~/utils/multicall';
 import { useMulticallContract } from './use-contract';
 import { useActiveWeb3React } from './use-web3';
 

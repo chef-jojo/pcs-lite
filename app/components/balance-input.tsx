@@ -6,19 +6,21 @@ import {
   Modal,
   ModalContent,
   ModalTrigger,
-  ModalPortal,
   NumberInput,
   NumberInputProps,
   styled,
   Text,
+  ModalHeader,
+  Box,
 } from '@pcs/ui';
 import { useAtom } from 'jotai';
-import { FC, useState } from 'react';
+import { FC, useCallback, useState } from 'react';
 import { InputCurrencyAtom } from '~/components/swap/hooks/use-swap-info';
 import {
   useCurrency,
   useCurrencyBalance,
 } from '~/hooks/use-currency';
+import { useActiveWeb3React } from '~/hooks/use-web3';
 import { CurrencyList, CurrencySearch } from './token-list';
 
 const Input = styled(UIInput, {
@@ -63,13 +65,28 @@ export const CurrencyBalance: FC<{
   const [orderAddress] = useAtom($otherCurrencyAddress);
   const currency = useCurrency(address);
   const otherCurrency = useCurrency(orderAddress);
-  const { data, isValidating, error } = useCurrencyBalance(currency);
-  const modal = useModal();
+  const { account } = useActiveWeb3React();
+  const { data } = useCurrencyBalance(currency);
+  const [open, setOpen] = useState(false);
+
+  const onSelect = useCallback(
+    (selectedCurrency: Currency) => {
+      setAddress(
+        isCurrencyToken(selectedCurrency)
+          ? selectedCurrency.address
+          : currency === ETHER
+          ? 'BNB'
+          : '',
+      );
+      setOpen(false);
+    },
+    [currency, setAddress],
+  );
 
   return (
     <Flex align="end" justify="between" css={{ px: '$2' }}>
       {currency && otherCurrency ? (
-        <Modal {...modal}>
+        <Modal open={open} onOpenChange={setOpen}>
           <ModalTrigger asChild>
             <Button size="xs" variant="text" css={{ color: '$text' }}>
               {currency.symbol}
@@ -79,25 +96,18 @@ export const CurrencyBalance: FC<{
             <CurrencySearch
               otherCurrency={otherCurrency}
               selectedCurrency={currency}
-              onSelect={(selectedCurrency) => {
-                setAddress(
-                  isCurrencyToken(selectedCurrency)
-                    ? selectedCurrency.address
-                    : currency === ETHER
-                    ? 'BNB'
-                    : '',
-                );
-                modal.onOpenChange(false);
-              }}
+              onSelect={onSelect}
             />
           </ModalContent>
         </Modal>
       ) : (
         <div>loading...</div>
       )}
-      <Text size="xs">
-        Balance: {data?.toSignificant(6) ?? 'loading'}
-      </Text>
+      {account && (
+        <Text size="xs">
+          Balance: {data?.toSignificant(6) ?? 'loading'}
+        </Text>
+      )}
     </Flex>
   );
 };

@@ -8,7 +8,7 @@ import {
 import { useMemo } from 'react';
 import { mainnetTokens } from 'config/constants/tokens';
 import { PairState, usePairs } from './use-pairs';
-import { wrappedCurrency } from '../utils/wrapped-currency';
+import { wrappedCurrency } from '../utils/wrapped';
 import { useActiveWeb3React } from './use-web3';
 
 const BUSD_MAINNET = mainnetTokens.busd;

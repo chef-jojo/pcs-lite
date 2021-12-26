@@ -1,13 +1,27 @@
 import { Web3ReactProvider } from '@web3-react/core';
 import { FC } from 'react';
-import { useEagerConnect, useInactiveListener } from '~/hooks/use-web3';
+import { SWRConfig } from 'swr';
+import {
+  useEagerConnect,
+  useInactiveListener,
+} from '~/hooks/use-web3';
+import { loggerMiddleware } from '~/hooks/useSWRContract';
 import getLibrary from '~/utils/get-library';
 
 export const Providers: FC = ({ children }) => {
   return (
     <Web3ReactProvider getLibrary={getLibrary}>
-      <Connect />
-      {children}
+      <SWRConfig
+        value={{
+          use:
+            process.env.NODE_ENV === 'development'
+              ? [loggerMiddleware]
+              : [],
+        }}
+      >
+        <Connect />
+        {children}
+      </SWRConfig>
     </Web3ReactProvider>
   );
 };

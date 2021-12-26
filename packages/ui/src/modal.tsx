@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { ComponentProps } from 'react';
 import { styled, CSS } from '../stitches.config';
 import * as ModalPrimitive from '@radix-ui/react-dialog';
-import { CloseIcon } from '@pcs/icons';
+import { CloseIcon, ArrowLeftIcon } from '@pcs/icons';
 import { overlayStyles } from './overlay';
 import { cardStyles } from './card';
 import { IconButton } from './icon-button';
+import { Text } from './text';
 
 type DialogProps = React.ComponentProps<
   typeof ModalPrimitive.Root
@@ -36,7 +37,7 @@ const StyledContent = styled(ModalPrimitive.Content, cardStyles, {
   transform: 'translate(-50%, -50%)',
   minWidth: 200,
   maxHeight: '85vh',
-  padding: '$4',
+  // padding: '$4',
   marginTop: '-5vh',
   // animation: `${fadeIn} 125ms linear, ${moveDown} 125ms cubic-bezier(0.22, 1, 0.36, 1)`,
 
@@ -50,9 +51,9 @@ const StyledContent = styled(ModalPrimitive.Content, cardStyles, {
 });
 
 const StyledCloseButton = styled(ModalPrimitive.Close, {
-  position: 'absolute',
-  top: '$2',
-  right: '$2',
+  // position: 'absolute',
+  // top: '$2',
+  // right: '$2',
 });
 
 type DialogContentPrimitiveProps = React.ComponentProps<
@@ -66,13 +67,44 @@ export const ModalContent = React.forwardRef<
 >(({ children, ...props }, forwardedRef) => (
   <StyledContent {...props} ref={forwardedRef}>
     {children}
-    <StyledCloseButton asChild>
-      <IconButton variant="light">
-        <CloseIcon />
-      </IconButton>
-    </StyledCloseButton>
   </StyledContent>
 ));
+
+const StyledModalHeader = styled('div', {
+  alignItems: 'center',
+  display: 'flex',
+  padding: '12px 24px',
+  background: 'transparent',
+  borderBottom: '1px solid $cardBorder',
+});
+
+export const ModalHeader = React.forwardRef<
+  React.ElementRef<typeof StyledModalHeader>,
+  ComponentProps<typeof StyledModalHeader> & {
+    children: React.ReactNode;
+    onBack?: () => void;
+  }
+>(({ children, onBack, ...props }, forwardedRef) => {
+  return (
+    <StyledModalHeader ref={forwardedRef} {...props}>
+      {onBack && (
+        <IconButton variant="text" onClick={onBack}>
+          <ArrowLeftIcon />
+        </IconButton>
+      )}
+      <ModalTitle asChild>
+        <Text css={{ flex: 1, textAlign: 'left' }} size="h3">
+          {children}
+        </Text>
+      </ModalTitle>
+      <StyledCloseButton asChild>
+        <IconButton variant="text">
+          <CloseIcon />
+        </IconButton>
+      </StyledCloseButton>
+    </StyledModalHeader>
+  );
+});
 
 export const ModalTrigger = ModalPrimitive.Trigger;
 export const ModalClose = ModalPrimitive.Close;

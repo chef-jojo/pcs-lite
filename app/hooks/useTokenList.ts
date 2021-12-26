@@ -145,7 +145,7 @@ function useTokensFromMap(
   tokenMap: typeof DEFAULT_TOKEN_MAP,
   includeUserAdded?: boolean,
 ): { [address: string]: Token } {
-  const { chainId } = useActiveWeb3React();
+  const { chainId = 56 } = useActiveWeb3React();
   const [userAddedTokens] = useAtom($userAddedTokenByChain);
 
   const tokensByAddress = useMemo(() => {
@@ -205,7 +205,8 @@ export function useAllTokens() {
   const [activeListUrls] = useAtom($listActiveListUrls);
 
   const activeTokens = useCombinedTokenMapFromUrls(activeListUrls);
-  // TODO: add remote tokens and user added tokens
+
+  // TODO: add user added tokens
   return useTokensFromMap(
     combineMaps(DEFAULT_TOKEN_MAP, activeTokens),
     true,

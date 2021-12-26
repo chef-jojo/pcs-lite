@@ -79,7 +79,6 @@ export function ManageList() {
       });
   }, [listByUrls, activeCopy]);
 
-  console.log(sortedLists);
   const { t } = useTranslation();
 
   return (
@@ -97,7 +96,7 @@ export function ManageList() {
               srcs={list.logoURI ? [list.logoURI] : []}
               alt={`${list.name} list logo`}
             />
-            <Box>
+            <Box css={{ textAlign: 'left', flex: 1 }}>
               <Text bold>{list.name}</Text>
               <Flex align="center" css={{ mt: '$1' }} gap="2">
                 <Text

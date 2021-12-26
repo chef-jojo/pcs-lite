@@ -206,6 +206,8 @@ const Home: NextPage = () => {
 
   const { cache, mutate, ...extraConfig } = useSWRConfig();
 
+  // useSWRBatch([]);
+
   return (
     <Box
       css={{

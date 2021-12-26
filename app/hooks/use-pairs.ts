@@ -49,6 +49,7 @@ export function usePairs(
   const multiCallresult = useMultiCall(V2PairAbi, calls);
 
   const result =
+    // @ts-ignore
     multiCallresult?.data?.map((data, i) => {
       if (!data) {
         return [PairState.NOT_EXISTS, null];

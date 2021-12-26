@@ -7,8 +7,9 @@ import { isAddress } from '~/utils/is-address';
 import { Call } from '~/utils/multicall';
 import { getRpcProvider } from '~/utils/rpc';
 import ERC20_ABI from '../config/abi/erc20.json';
+import { useTokenContract } from './use-contract';
 import { useActiveWeb3React } from './use-web3';
-import { useMultiCall } from './useSWRContract';
+import { useMultiCall, useSWRContract } from './useSWRContract';
 import { useAllTokens } from './useTokenList';
 
 const getToken = async (chainId: ChainId, tokenAddress: string) => {
@@ -40,12 +41,14 @@ const getTokenBalance = async (
 };
 
 export function useTokenSWR(tokenAddress?: string) {
-  const { chainId, library } = useActiveWeb3React();
+  const { chainId } = useActiveWeb3React();
   const allTokens = useAllTokens();
   const address = isAddress(tokenAddress);
   const tokenFromList = address && allTokens[address];
   const result = useSWRImmutable(
-    address || !tokenFromList ? [chainId, address, 'token'] : null,
+    address && chainId && !tokenFromList
+      ? [chainId, address, 'token']
+      : null,
     getToken,
   );
 
@@ -55,9 +58,13 @@ export function useTokenSWR(tokenAddress?: string) {
 export function useTokenBalanceSWR(token?: Token) {
   const { account, chainId } = useActiveWeb3React();
   const address = isAddress(token?.address);
-  const { data: bigNumberData, ...result } = useSWR(
-    address && account ? [address, account, chainId] : null,
-    getTokenBalance,
+  const tokenContract = useTokenContract(
+    address ? address : undefined,
+  );
+  const { data: bigNumberData, ...result } = useSWRContract(
+    chainId && account && tokenContract
+      ? [tokenContract, 'balanceOf', [account]]
+      : null,
   );
 
   let data: TokenAmount | undefined;
@@ -76,20 +83,22 @@ export function useTokenBalanceSWR(token?: Token) {
 }
 
 export function useTokenBalances(tokens?: Token[]) {
-  const { account, chainId } = useActiveWeb3React();
-  const validatedTokens: Token[] = useMemo(
-    () =>
+  const { account } = useActiveWeb3React();
+  const validatedTokens: Token[] = useMemo(() => {
+    return (
       tokens?.filter(
         (t?: Token): t is Token => isAddress(t?.address) !== false,
-      ) ?? [],
-    [tokens],
-  );
+      ) ?? []
+    );
+  }, [tokens]);
 
-  const calls: Call[] = validatedTokens.map((token) => ({
-    address: token.address,
-    name: 'balanceOf',
-    params: [account],
-  }));
+  const calls: Call[] = useMemo(() => {
+    return validatedTokens.map((token) => ({
+      address: token.address,
+      name: 'balanceOf',
+      params: [account],
+    }));
+  }, [account, validatedTokens]);
   const multiRes = useMultiCall(
     ERC20_ABI,
     account && validatedTokens ? calls : null,

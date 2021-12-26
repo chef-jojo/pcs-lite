@@ -32,6 +32,7 @@ export const multicall = async <T = any>(
     requireSuccess,
     calldata,
   );
+  // @ts-ignore
   const res = returnData.map((call, i) => {
     const [result, data] = call;
     try {

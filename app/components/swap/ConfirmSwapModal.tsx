@@ -44,10 +44,7 @@ interface ConfirmSwapModalProps {
   customOnDismiss?: () => void;
 }
 
-const ConfirmSwapModal: React.FC<
-  ConfirmSwapModalProps &
-    Omit<ComponentProps<typeof TransactionConfirmationModal>, 'title'>
-> = ({
+const ConfirmSwapModal: React.FC<any> = ({
   trade,
   originalTrade,
   onAcceptChanges,

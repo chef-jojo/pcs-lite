@@ -31,7 +31,11 @@ const WalletWrapper = styled(Box, {
   borderBottom: '1px solid $cardBorder',
 });
 
-const WalletCard: React.FC = ({ login, walletConfig, onDismiss }) => {
+const WalletCard: React.FC<any> = ({
+  login,
+  walletConfig,
+  onDismiss,
+}) => {
   const { title, icon: Icon } = walletConfig;
 
   return (
@@ -67,7 +71,7 @@ const config = [
   },
 ];
 
-const ConnectModal: React.FC = ({
+const ConnectModal: React.FC<any> = ({
   login,
   onDismiss = () => null,
   displayCount = 3,

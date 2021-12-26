@@ -1,4 +1,5 @@
 export { default as ArrowDownIcon } from "./arrow-down";
+export { default as ArrowLeftIcon } from "./arrow-left";
 export { default as ArrowUpIcon } from "./arrow-up";
 export { default as AutoRenewIcon } from "./auto-renew";
 export { default as BinanceIcon } from "./binance";

@@ -8,8 +8,16 @@ import {
 import {
   FixedSizeList as List,
   ListChildComponentProps,
+  ListItemKeySelector,
 } from 'react-window';
-import { Box, Button, Flex, styled, Text } from '@pcs/ui';
+import {
+  Box,
+  Button,
+  Flex,
+  ModalHeader,
+  styled,
+  Text,
+} from '@pcs/ui';
 import { TokenInfo } from '@uniswap/token-lists';
 import { atom, useAtom } from 'jotai';
 import { useUpdateAtom } from 'jotai/utils';
@@ -25,6 +33,7 @@ import { useTranslation } from '~/hooks/useTranslation';
 import { isAddress } from '~/utils/is-address';
 import CurrencyLogo from '../logo/CurrencyLogo';
 import { ManageList } from './manage';
+import { useCurrencyBalance } from '~/hooks/use-currency';
 
 /**
  * Create a filter function to apply to a token for whether it matches a particular search query
@@ -217,15 +226,33 @@ export function CurrencySearch({
   switch (view) {
     case CurrencyModalView.search:
       return (
-        <CurrencyList
-          onSelect={onSelect}
-          selectedCurrency={selectedCurrency}
-          otherCurrency={otherCurrency}
-        />
+        <>
+          <ModalHeader>Select a token</ModalHeader>
+          <Box css={{ py: '24px' }}>
+            <CurrencyList
+              onSelect={onSelect}
+              selectedCurrency={selectedCurrency}
+              otherCurrency={otherCurrency}
+            />
+          </Box>
+        </>
       );
 
     case CurrencyModalView.manage:
-      return <ManageList />;
+      return (
+        <>
+          <ModalHeader
+            onBack={() => {
+              setView(CurrencyModalView.search);
+            }}
+          >
+            Manage tokens
+          </ModalHeader>
+          <Box css={{ py: '24px' }}>
+            <ManageList />
+          </Box>
+        </>
+      );
     default:
       return null;
   }
@@ -288,6 +315,10 @@ export function CurrencyList({
       const otherSelected = Boolean(
         otherCurrency && currencyEquals(otherCurrency, token),
       );
+      if (!token) {
+        return null;
+      }
+
       return (
         <StyledItem
           onClick={() => onSelect(token)}
@@ -295,28 +326,28 @@ export function CurrencyList({
           selected={isSelected}
           style={style}
         >
-          <CurrencyListItem key={token.address} token={token} />
+          <CurrencyListItem token={token} />
         </StyledItem>
       );
     },
     [onSelect, otherCurrency, selectedCurrency],
   );
 
+  const itemKey: ListItemKeySelector<Token[]> = useCallback(
+    (index, item) => currencyKey(item[index]),
+    [],
+  );
+
   return (
     <>
-      <Box
-        css={{
-          overflow: 'scroll',
-          height: '390px',
-        }}
-      >
+      <Box>
         <List
           height={390}
           width="100%"
           itemData={filteredSortedTokens}
           itemCount={filteredSortedTokens.length}
           itemSize={56}
-          itemKey={(index, item) => currencyKey(item[index])}
+          itemKey={itemKey}
         >
           {Row}
         </List>
@@ -362,7 +393,7 @@ const StyledItem = styled('div', {
 });
 
 function CurrencyListItem({ token }: { token: Token }) {
-  const { data: balance, isValidating } = useTokenBalanceSWR(token);
+  const { data: balance, isValidating } = useCurrencyBalance(token);
 
   return (
     <>
