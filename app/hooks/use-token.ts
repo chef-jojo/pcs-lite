@@ -70,7 +70,7 @@ export function useTokenBalanceSWR(token?: Token) {
       ? [tokenContract, 'balanceOf', [account]]
       : null,
     {
-      use: [unstable_batchMiddleware],
+      // use: [unstable_batchMiddleware],
     },
   );
 

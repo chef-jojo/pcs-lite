@@ -1,4 +1,4 @@
-import { Currency, ETHER, Token } from '@pancakeswap/sdk';
+import { Currency, ETHER } from '@pancakeswap/sdk';
 import {
   Button,
   Flex,

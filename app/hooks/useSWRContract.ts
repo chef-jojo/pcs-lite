@@ -263,7 +263,7 @@ export default function useInterval(
 }
 
 export function unstable_useSWRContractBatchUpdater(
-  delay: number = 300,
+  delay: number = 100,
 ) {
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const batchKeys = useSyncExternalStoreWithSelector(
