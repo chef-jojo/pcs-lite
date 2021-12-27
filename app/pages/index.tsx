@@ -11,10 +11,7 @@ import {
 } from '~/components/balance-input';
 import { CircleLoader } from '~/components/loader/CircleLoader';
 import { Menu } from '~/components/menu';
-import {
-  $slippage,
-  SettingModal,
-} from '~/components/settings/settings-modal';
+import { SettingModal } from '~/components/settings/settings-modal';
 import confirmPriceImpactWithoutFee from '~/components/swap/confirmPriceImpactWithoutFee';
 import ConfirmSwapModal from '~/components/swap/ConfirmSwapModal';
 import {
@@ -33,7 +30,7 @@ import { useAllTokenBalances } from '~/components/token-list';
 import { INITIAL_ALLOWED_SLIPPAGE } from '~/config/constants';
 import { ApprovalState } from '~/hooks/useApproveCallback';
 import { useTranslation } from '~/hooks/useTranslation';
-import { $userIsExpertMode } from '~/state/user';
+import { $userIsExpertMode, $userSlippage } from '~/state/user';
 import {
   computeTradePriceBreakdown,
   warningSeverity,
@@ -76,7 +73,7 @@ const Home: NextPage = () => {
       };
 
   const [showInverted, setShowInverted] = useState(false);
-  const [allowedSlippage] = useAtom($slippage);
+  const [allowedSlippage] = useAtom($userSlippage);
   const [isExpertMode] = useAtom($userIsExpertMode);
 
   const { t } = useTranslation();

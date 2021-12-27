@@ -10,18 +10,18 @@ import {
   ModalTrigger,
   Text,
 } from '@pcs/ui';
-import { atom, useAtom } from 'jotai';
-import { INITIAL_ALLOWED_SLIPPAGE } from '~/config/constants';
+import { useAtom } from 'jotai';
+import { $userSlippage } from '~/state/user';
 
 const slippages = [0.1, 0.5, 1.0];
 const isValid = (slippage: number) =>
   slippage >= 0 && slippage <= 5000;
 
 const DEFAULT_MIGRATE_SLIPPAGE_TOLERANCE = new Percent('50', '10000');
-export const $slippage = atom(INITIAL_ALLOWED_SLIPPAGE);
 
 export function SettingModal() {
-  const [currentSlippage, setCurrentSlippage] = useAtom($slippage);
+  const [currentSlippage, setCurrentSlippage] =
+    useAtom($userSlippage);
   return (
     <Modal>
       <ModalTrigger asChild>

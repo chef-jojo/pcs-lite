@@ -1,5 +1,6 @@
 import { TokenList } from '@uniswap/token-lists';
 import { atom } from 'jotai';
+import { atomWithStorage } from 'jotai/utils';
 import {
   DEFAULT_LIST_OF_LISTS,
   UNSUPPORTED_LIST_URLS,
@@ -19,7 +20,10 @@ const NEW_LIST_STATE: ListState = {
   pendingUpdate: null,
 };
 
-export const $listActiveListUrls = atom<string[]>([]);
+export const $listActiveListUrls = atomWithStorage<string[]>(
+  '@pcs/listActiveListUrls',
+  [],
+);
 export const $listUrls = atom(DEFAULT_LIST_OF_LISTS);
 export const $listByUrls = atom({
   ...DEFAULT_LIST_OF_LISTS.concat(...UNSUPPORTED_LIST_URLS).reduce<

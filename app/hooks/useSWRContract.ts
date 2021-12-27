@@ -1,16 +1,27 @@
 import { BigNumber, Contract, ethers } from 'ethers';
 import { Result } from 'ethers/lib/utils';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { unstable_batchedUpdates } from 'react-dom';
-import useSWR, {
-  Middleware,
-  SWRConfiguration,
-  SWRHook,
-  unstable_serialize,
-} from 'swr';
+import useSWR, { Middleware, SWRConfiguration, SWRHook } from 'swr';
 import { useSyncExternalStoreWithSelector } from 'use-sync-external-store/shim/with-selector';
 import { Call, MulticallOptions } from '~/utils/multicall';
 import { useMulticallContract } from './use-contract';
+
+const getCircularReplacer = () => {
+  const seen = new WeakSet();
+  return (key: string, value: any) => {
+    if (typeof value === 'object' && value !== null) {
+      if (seen.has(value)) {
+        return;
+      }
+      seen.add(value);
+    }
+    return value;
+  };
+};
+
+const stringify = (value: any) =>
+  JSON.stringify(value, getCircularReplacer());
 
 type MethodArg = string | number | BigNumber;
 type MethodArgs = Array<MethodArg | MethodArg[]>;
@@ -150,16 +161,17 @@ export const unstable_batchMiddleware = (<Data, Error>(
   ): any => {
     const { data, error, mutate } = useSWRNext(key, null, config);
 
+    const stringKey = useMemo(() => stringify(key), [key]);
+
     const value = useSyncExternalStoreWithSelector(
       store.subscribe,
       store.getState,
       null,
-      (select) => select.currentState.get(unstable_serialize(key)),
+      (select) => select.currentState.get(stringKey),
     );
 
     useEffect(() => {
       store.batchSet(key);
-      return () => {};
     }, [key]);
 
     useEffect(() => {
@@ -187,11 +199,11 @@ function createMulticallStore() {
 
   return {
     batchSet(multicallKey: UseSWRContractKeys) {
-      batchKeys.set(unstable_serialize(multicallKey), multicallKey);
+      batchKeys.set(stringify(multicallKey), multicallKey);
       update();
     },
     batchDelete(multicallKey: UseSWRContractKeys) {
-      batchKeys.delete(unstable_serialize(multicallKey));
+      batchKeys.delete(stringify(multicallKey));
       update();
     },
     batchClear() {
@@ -303,7 +315,7 @@ export function unstable_useSWRContractBatchUpdater(
                       methodName,
                       data,
                     ),
-                    key: unstable_serialize(key),
+                    key: stringify(key),
                   }
                 : null;
             });

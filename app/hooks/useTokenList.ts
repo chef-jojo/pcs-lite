@@ -60,9 +60,7 @@ export function useTokenListSWR() {
   );
 
   return useSWR(
-    Boolean(list.length) && chainId
-      ? [list, chainId, 'token-list']
-      : null,
+    Boolean(list.length) ? [list, 'token-list'] : null,
     async () => {
       let listByUrls: Record<string, TokenList> = {};
       for (const url of list) {

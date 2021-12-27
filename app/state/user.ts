@@ -1,7 +1,11 @@
 import { Token } from '@pancakeswap/sdk';
 import { parseUnits } from 'ethers/lib/utils';
 import { atom } from 'jotai';
-import { DEFAULT_DEADLINE_FROM_NOW } from '~/config/constants';
+import { atomWithStorage } from 'jotai/utils';
+import {
+  DEFAULT_DEADLINE_FROM_NOW,
+  INITIAL_ALLOWED_SLIPPAGE,
+} from '~/config/constants';
 import { $chainId } from '~/hooks/use-web3';
 
 export enum GAS_PRICE {
@@ -20,16 +24,27 @@ export const GAS_PRICE_GWEI = {
 export const $userDeadLine = atom(DEFAULT_DEADLINE_FROM_NOW);
 
 export const $userGasPrice = atom(GAS_PRICE_GWEI.default);
-export const $userIsExpertMode = atom(false);
+export const $userIsExpertMode = atomWithStorage(
+  '@pcs/userExpert',
+  false,
+);
 
 const defaultUserAddedTokens: {
   [chainId: string]: { [address: string]: Token };
 } = {};
 
-export const $userAddedTokens = atom(defaultUserAddedTokens);
+export const $userAddedTokens = atomWithStorage(
+  '@pcs/userAddedTokens',
+  defaultUserAddedTokens,
+);
 export const $userAddedTokenByChain = atom((get) => {
   const chainId = get($chainId);
   const userAddedTokens = get($userAddedTokens);
   if (!chainId) return [];
   return Object.values(userAddedTokens?.[chainId] ?? {});
 });
+
+export const $userSlippage = atomWithStorage(
+  '@pcs/userSlippage',
+  INITIAL_ALLOWED_SLIPPAGE,
+);

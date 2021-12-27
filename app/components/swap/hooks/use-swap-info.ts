@@ -20,9 +20,9 @@ import {
 } from '~/hooks/use-currency';
 import { parseUnits } from 'ethers/lib/utils';
 import { useTradeExactIn, useTradeExactOut } from '~/hooks/use-trade';
-import { $slippage } from '~/components/settings/settings-modal';
 import { computeSlippageAdjustedAmounts } from '~/utils/price';
 import { createConfig } from '~/utils/create-config';
+import { $userSlippage } from '~/state/user';
 
 const defaultInputOutputCurrency = createConfig(
   {
@@ -291,7 +291,7 @@ export function useDerivedSwapInfo(): {
   //   inputError = inputError ?? t('Invalid recipient');
   // }
 
-  const [slippage] = useAtom($slippage);
+  const [slippage] = useAtom($userSlippage);
 
   const slippageAdjustedAmounts =
     v2Trade &&
