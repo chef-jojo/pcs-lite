@@ -98,7 +98,7 @@ function Transaction(props: { abiFiles: string[] }) {
 const Display = ({ type, value }: any) => {
   switch (type) {
     case 'uint256':
-      return ethers.utils.formatUnits(value);
+      return value.toString();
     case 'uint8':
     case 'string':
       return value;
