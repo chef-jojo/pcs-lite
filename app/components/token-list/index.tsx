@@ -221,7 +221,7 @@ export function CurrencySearch({
 
   useEffect(() => {
     setView(CurrencyModalView.search);
-  }, []);
+  }, [setView]);
 
   switch (view) {
     case CurrencyModalView.search:

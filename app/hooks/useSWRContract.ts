@@ -1,15 +1,14 @@
 import { BigNumber, Contract, ethers } from 'ethers';
 import { Result } from 'ethers/lib/utils';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { unstable_batchedUpdates } from 'react-dom';
 import useSWR, {
-  BareFetcher,
-  Key,
   Middleware,
   SWRConfiguration,
   SWRHook,
+  unstable_serialize,
 } from 'swr';
-import { useSyncExternalStore } from 'use-sync-external-store/shim';
+import { useSyncExternalStoreWithSelector } from 'use-sync-external-store/shim/with-selector';
 import { Call, MulticallOptions } from '~/utils/multicall';
 import { useMulticallContract } from './use-contract';
 
@@ -141,53 +140,79 @@ export function useSWRMultiCall<Data = any, Error = any>(
   return swrResult;
 }
 
-export const batchMiddleware = (<Data, Error>(useSWRNext: SWRHook) =>
+export const unstable_batchMiddleware = (<Data, Error>(
+    useSWRNext: SWRHook,
+  ) =>
   (
     key: UseSWRContractKeys,
     _: any,
     config?: SWRConfiguration,
   ): any => {
     const { data, error, mutate } = useSWRNext(key, null, config);
-    const value = useSyncExternalStore(
+
+    const value = useSyncExternalStoreWithSelector(
       store.subscribe,
       store.getState,
+      null,
+      (select) => select.currentState.get(unstable_serialize(key)),
     );
 
     useEffect(() => {
-      store.add(key);
-
+      store.batchSet(key);
       return () => {};
     }, [key]);
+
+    useEffect(() => {
+      if (value) {
+        mutate(value);
+        store.batchDelete(key);
+      }
+    }, [key, mutate, value]);
 
     return { data, error };
   }) as Middleware;
 
 const store = createMulticallStore();
 
-function createMulticallStore(
-  initialState: Set<UseSWRContractKeys> = new Set(),
-) {
+function createMulticallStore() {
   const listeners = new Set<Function>();
-  let currentState = initialState;
+  let batchKeys = new Map<string, UseSWRContractKeys>();
+  let currentState = new Map<string, any>();
+
+  const update = () => {
+    unstable_batchedUpdates(() => {
+      listeners.forEach((listener) => listener());
+    });
+  };
+
   return {
-    add(multicallKey: UseSWRContractKeys) {
-      currentState.add(multicallKey);
-      unstable_batchedUpdates(() => {
-        listeners.forEach((listener) => listener());
-      });
+    batchSet(multicallKey: UseSWRContractKeys) {
+      batchKeys.set(unstable_serialize(multicallKey), multicallKey);
+      update();
     },
-    clear() {
-      currentState.clear();
-      unstable_batchedUpdates(() => {
-        listeners.forEach((listener) => listener());
-      });
+    batchDelete(multicallKey: UseSWRContractKeys) {
+      batchKeys.delete(unstable_serialize(multicallKey));
+      update();
+    },
+    batchClear() {
+      batchKeys.clear();
+      update();
+    },
+    setValues(values: { key: string; value: any }[]) {
+      for (const value of values) {
+        currentState.set(value.key, value.value);
+      }
+      update();
     },
     subscribe(listener: Function) {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
     getState() {
-      return currentState;
+      return {
+        batchKeys,
+        currentState,
+      };
     },
     getSubscriberCount() {
       return listeners.size;
@@ -195,147 +220,101 @@ function createMulticallStore(
   };
 }
 
-function useDebounce<T>(value: T, delay: number) {
-  // State and setters for debounced value
-  const [debouncedValue, setDebouncedValue] = useState(value);
-  useEffect(
-    () => {
-      // Update debounced value after delay
-      const handler = setTimeout(() => {
-        setDebouncedValue(value);
-      }, delay);
-      // Cancel the timeout if value changes (also on delay change or unmount)
-      // This is how we prevent debounced value from updating if value is changed ...
-      // .. within the delay period. Timeout gets cleared and restarted.
-      return () => {
-        clearTimeout(handler);
-      };
-    },
-    [value, delay], // Only re-call effect if value or delay changes
-  );
-  return debouncedValue;
+export default function useInterval(
+  callback: () => void,
+  delay: null | number,
+  leading = true,
+) {
+  const savedCallback = useRef<() => void>();
+
+  // Remember the latest callback.
+  useEffect(() => {
+    savedCallback.current = callback;
+  }, [callback]);
+
+  // Set up the interval.
+  useEffect(() => {
+    function tick() {
+      const { current } = savedCallback;
+      if (current) {
+        current();
+      }
+    }
+
+    if (delay !== null) {
+      if (leading) tick();
+      const id = setInterval(tick, delay);
+      return () => clearInterval(id);
+    }
+    return undefined;
+  }, [delay, leading]);
 }
 
-// export function useSWRContractBatchUpdater(delay: number = 500) {
-//   const value = useSyncExternalStore(store.subscribe, store.getState);
+export function unstable_useSWRContractBatchUpdater(
+  delay: number = 300,
+) {
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const batchKeys = useSyncExternalStoreWithSelector(
+    store.subscribe,
+    store.getState,
+    null,
+    (select) => select.batchKeys,
+  );
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const multicallContract = useMulticallContract();
 
-//   const debouncedValue = useDebounce(value, delay);
-//   const multicallContract = useMulticallContract();
-
-//   const calls = Array.from(debouncedValue)
-//     .filter(Boolean)
-//     .map((contractCall) => {
-//       const [contract, methodName, input] = contractCall;
-//       return {
-//         contract,
-//         methodName,
-//         address: contract?.address,
-//         callData: contract?.interface.encodeFunctionData(
-//           methodName,
-//           input,
-//         ),
-//       };
-//     });
-
-//   useEffect(() => {
-//     console.log(calls.map((c) => [c.address, c.callData]));
-//     if (multicallContract) {
-//       multicallContract.functions
-//         .tryBlockAndAggregate(
-//           false,
-//           calls.map((c) => [c.address, c.callData]),
-//         )
-//         .then((returnData: Result[]) => {
-//           console.log(returnData, 'returnData');
-//           return returnData.map((call, i) => {
-//             const { contract, methodName } = calls[i];
-//             const [result, data] = call;
-//             return result && data !== '0x'
-//               ? contract?.interface.decodeFunctionResult(
-//                   methodName,
-//                   data,
-//                 )
-//               : null;
-//           });
-//         })
-//         .then(console.info);
-//     }
-//   }, [calls, multicallContract]);
-// }
-
-// // integrated with address and chainId
-// export function useMultiCallMultipleContract<Data = any, Error = any>(
-//   calls?: Array<UseSWRContractKeys> | null,
-//   options: MulticallOptions = { requireSuccess: true },
-//   config: SWRConfiguration<Data, Error> = {},
-// ) {
-//   const multicallContract = useMulticallContract();
-//   return useSWRMultiCallMultipleContract(
-//     multicallContract,
-//     calls,
-//     options,
-//     config,
-//   );
-// }
-
-// export function useSWRMultiCallMultipleContract<
-//   Data = any,
-//   Error = any,
-// >(
-//   multicallContract: Contract | null | undefined,
-//   calls?: Array<UseSWRContractKeys> | null,
-//   options: MulticallOptions = { requireSuccess: true },
-//   config: SWRConfiguration<Data, Error> = {},
-// ) {
-//   const { requireSuccess } = options;
-
-//   const calldata =
-//     calls?.map((call) => {
-//       const [contract, methodName, inputs] = call;
-//       return [
-//         contract?.address.toLowerCase(),
-//         contract?.interface.encodeFunctionData(methodName, inputs),
-//       ];
-//     }) ?? [];
-
-//   const swrResult = useSWR(
-//     calls && Boolean(calls.length) ? [calls] : null,
-//     async () => {
-//       console.debug('multicall multiple contract', calls);
-//       if (!multicallContract) {
-//         throw new Error('Multicall contract not found');
-//       }
-//       const res =
-//         await multicallContract.functions.tryBlockAndAggregate(
-//           requireSuccess,
-//           calldata,
-//         );
-//       const [blockNumber, blockHash, returnData] = res;
-//       // TODO: blockNumber refetch
-
-//       // @ts-ignore
-//       return returnData.map((call, i) => {
-//         const [result, data] = call;
-//         return result && data !== '0x'
-//           ? calls?.[i][0]?.interface.decodeFunctionResult(
-//               calls?.[i][1],
-//               data,
-//             )
-//           : null;
-//       });
-//     },
-//     {
-//       revalidateOnFocus: false,
-//       revalidateOnReconnect: false,
-//       ...config,
-//     },
-//   );
-
-//   if (process.env.NODE_ENV === 'development') {
-//     if (swrResult.error) {
-//       console.error(swrResult.error);
-//     }
-//   }
-
-//   return swrResult;
-// }
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useInterval(
+    async () => {
+      const calls = Array.from(batchKeys.values())
+        .filter(Boolean)
+        .map((contractCall) => {
+          const [contract, methodName, input] = contractCall;
+          return {
+            key: contractCall,
+            contract,
+            methodName,
+            address: contract?.address,
+            callData: contract?.interface.encodeFunctionData(
+              methodName,
+              input,
+            ),
+          };
+        });
+      store.batchClear();
+      if (calls.length === 0) {
+        return;
+      }
+      console.log(calls, 'calls');
+      if (multicallContract) {
+        multicallContract.functions
+          .tryBlockAndAggregate(
+            false,
+            calls.map((c) => [c.address, c.callData]),
+          )
+          .then((res) => {
+            const [blockNumber, blockHash, returnData] = res;
+            return (returnData as Result[]).map((call, i) => {
+              const { contract, methodName, key } = calls[i];
+              const [result, data] = call;
+              return result && data !== '0x'
+                ? {
+                    value: contract?.interface.decodeFunctionResult(
+                      methodName,
+                      data,
+                    ),
+                    key: unstable_serialize(key),
+                  }
+                : null;
+            });
+          })
+          .then((r) => {
+            // @ts-ignore
+            store.setValues(r);
+          });
+      }
+    },
+    batchKeys.size > 0 ? delay : null,
+    false,
+  );
+}

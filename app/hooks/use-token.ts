@@ -9,7 +9,11 @@ import { getRpcProvider } from '~/utils/rpc';
 import ERC20_ABI from '../config/abi/erc20.json';
 import { useTokenContract } from './use-contract';
 import { useActiveWeb3React } from './use-web3';
-import { useMultiCall, useSWRContract } from './useSWRContract';
+import {
+  unstable_batchMiddleware,
+  useMultiCall,
+  useSWRContract,
+} from './useSWRContract';
 import { useAllTokens } from './useTokenList';
 
 const getToken = async (chainId: ChainId, tokenAddress: string) => {
@@ -65,6 +69,9 @@ export function useTokenBalanceSWR(token?: Token) {
     chainId && account && tokenContract
       ? [tokenContract, 'balanceOf', [account]]
       : null,
+    {
+      use: [unstable_batchMiddleware],
+    },
   );
 
   let data: TokenAmount | undefined;
