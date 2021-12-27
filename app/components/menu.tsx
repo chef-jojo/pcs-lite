@@ -1,6 +1,7 @@
 import { Flex, Text, Box, Button } from '@pcs/ui';
 import { useActiveWeb3React } from '~/hooks/use-web3';
 import useAuth from '~/hooks/useAuth';
+import truncateHash from '~/utils/truncateHash';
 import ConnectWalletButton from './ConnectWalletButton';
 
 export function Menu() {
@@ -11,7 +12,7 @@ export function Menu() {
       <Text>ChainId: {chainId}</Text>
       {account ? (
         <Flex align="center">
-          <Text>{account}</Text>
+          <Text>{truncateHash(account)}</Text>
           <Button onClick={logout}>Logout</Button>
         </Flex>
       ) : (

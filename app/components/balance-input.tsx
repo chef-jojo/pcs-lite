@@ -10,8 +10,6 @@ import {
   NumberInputProps,
   styled,
   Text,
-  ModalHeader,
-  Box,
 } from '@pcs/ui';
 import { useAtom } from 'jotai';
 import { FC, useCallback, useState } from 'react';
@@ -21,7 +19,8 @@ import {
   useCurrencyBalance,
 } from '~/hooks/use-currency';
 import { useActiveWeb3React } from '~/hooks/use-web3';
-import { CurrencyList, CurrencySearch } from './token-list';
+import { isCurrencyToken } from '~/utils/is-token';
+import { CurrencySearch } from './token-list';
 
 const Input = styled(UIInput, {
   appearance: 'none',
@@ -45,17 +44,6 @@ const Input = styled(UIInput, {
     boxShadow: 'none',
   },
 });
-
-const isCurrencyToken = (currency: Currency): currency is Token =>
-  currency instanceof Token;
-
-function useModal() {
-  const [open, setOpen] = useState(false);
-  return {
-    open,
-    onOpenChange: setOpen,
-  };
-}
 
 export const CurrencyBalance: FC<{
   $currencyAddress: InputCurrencyAtom;

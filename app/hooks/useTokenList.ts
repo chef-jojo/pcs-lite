@@ -2,10 +2,16 @@ import {
   DEFAULT_LIST_OF_LISTS,
   listToTokenMap,
   TokenAddressMap,
+  UNSUPPORTED_LIST_URLS,
 } from '~/config/list';
 import { useActiveWeb3React } from './use-web3';
 import DEFAULT_TOKEN_LIST from '~/config/default-token-list.json';
-import { ChainId, Token } from '@pancakeswap/sdk';
+import {
+  ChainId,
+  Currency,
+  currencyEquals,
+  Token,
+} from '@pancakeswap/sdk';
 import { getTokens } from '~/config/constants/tokens';
 import { useAtom } from 'jotai';
 import {
@@ -20,6 +26,7 @@ import { getRpcProvider } from '~/utils/rpc';
 import { getTokenList } from '~/utils/get-token-list';
 import { TokenList } from '@uniswap/token-lists';
 import { $userAddedTokenByChain } from '~/state/user';
+import { filterTokens } from '~/components/token-list';
 
 const DEFAULT_TOKEN_MAP = listToTokenMap(DEFAULT_TOKEN_LIST);
 
@@ -107,6 +114,29 @@ function combineMaps(
       ...map2[ChainId.TESTNET],
     },
   };
+}
+
+// filter out unsupported lists
+export function useActiveListUrls(): string[] | undefined {
+  const [activeListUrls] = useAtom($listActiveListUrls);
+  return activeListUrls?.filter(
+    (url) => !UNSUPPORTED_LIST_URLS.includes(url),
+  );
+}
+
+export function useInactiveListUrls(): string[] {
+  const [lists] = useAtom($listByUrls);
+  const allActiveListUrls = useActiveListUrls();
+  return Object.keys(lists).filter(
+    (url) =>
+      !allActiveListUrls?.includes(url) &&
+      !UNSUPPORTED_LIST_URLS.includes(url),
+  );
+}
+
+export function useCombinedInactiveList(): TokenAddressMap {
+  const allInactiveListUrls: string[] = useInactiveListUrls();
+  return useCombinedTokenMapFromUrls(allInactiveListUrls);
 }
 
 function useCombinedTokenMapFromUrls(
@@ -206,9 +236,61 @@ export function useAllTokens() {
 
   const activeTokens = useCombinedTokenMapFromUrls(activeListUrls);
 
-  // TODO: add user added tokens
   return useTokensFromMap(
     combineMaps(DEFAULT_TOKEN_MAP, activeTokens),
     true,
   );
+}
+
+export function useIsUserAddedToken(
+  currency: Currency | undefined | null,
+): boolean {
+  const [userAddedTokens] = useAtom($userAddedTokenByChain);
+
+  if (!currency) {
+    return false;
+  }
+
+  return !!userAddedTokens.find((token) =>
+    currencyEquals(currency, token),
+  );
+}
+
+export function useAllInactiveTokens(): { [address: string]: Token } {
+  // get inactive tokens
+  const inactiveTokensMap = useCombinedInactiveList();
+  const inactiveTokens = useTokensFromMap(inactiveTokensMap, false);
+
+  // filter out any token that are on active list
+  const activeTokensAddresses = Object.keys(useAllTokens());
+  const filteredInactive = activeTokensAddresses
+    ? Object.keys(inactiveTokens).reduce<{
+        [address: string]: Token;
+      }>((newMap, address) => {
+        if (!activeTokensAddresses.includes(address)) {
+          newMap[address] = inactiveTokens[address];
+        }
+        return newMap;
+      }, {})
+    : inactiveTokens;
+
+  return filteredInactive;
+}
+
+export function useFoundOnInactiveList(
+  searchQuery: string,
+): Token[] | undefined {
+  const { chainId } = useActiveWeb3React();
+  const inactiveTokens = useAllInactiveTokens();
+
+  return useMemo(() => {
+    if (!chainId || searchQuery === '') {
+      return undefined;
+    }
+    const tokens = filterTokens(
+      Object.values(inactiveTokens),
+      searchQuery,
+    );
+    return tokens;
+  }, [chainId, inactiveTokens, searchQuery]);
 }

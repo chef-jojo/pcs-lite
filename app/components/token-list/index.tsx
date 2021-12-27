@@ -14,6 +14,7 @@ import {
   Box,
   Button,
   Flex,
+  Input,
   ModalHeader,
   styled,
   Text,
@@ -28,12 +29,23 @@ import {
   useTokenBalanceSWR,
   useTokenSWR,
 } from '~/hooks/use-token';
-import { useAllTokens } from '~/hooks/useTokenList';
+import {
+  useAllInactiveTokens,
+  useAllTokens,
+  useFoundOnInactiveList,
+  useIsUserAddedToken,
+} from '~/hooks/useTokenList';
 import { useTranslation } from '~/hooks/useTranslation';
 import { isAddress } from '~/utils/is-address';
 import CurrencyLogo from '../logo/CurrencyLogo';
 import { ManageList } from './manage';
 import { useCurrencyBalance } from '~/hooks/use-currency';
+import { Column } from '../layout/Column';
+import { ImportRow } from './ImportRow';
+import { isCurrencyToken } from '~/utils/is-token';
+import QuestionHelper from '../QuestionHelper';
+import { RowBetween } from '../layout/Row';
+import { ImportToken } from './ImportToken';
 
 /**
  * Create a filter function to apply to a token for whether it matches a particular search query
@@ -219,6 +231,9 @@ export function CurrencySearch({
 }) {
   const [view, setView] = useAtom($currencyModalView);
 
+  // used for import token flow
+  const [importToken, setImportToken] = useState<Token | undefined>();
+
   useEffect(() => {
     setView(CurrencyModalView.search);
   }, [setView]);
@@ -229,10 +244,11 @@ export function CurrencySearch({
         <>
           <ModalHeader>Select a token</ModalHeader>
           <Box css={{ py: '24px' }}>
-            <CurrencyList
+            <CurrencySearchList
               onSelect={onSelect}
               selectedCurrency={selectedCurrency}
               otherCurrency={otherCurrency}
+              setImportToken={setImportToken}
             />
           </Box>
         </>
@@ -253,6 +269,16 @@ export function CurrencySearch({
           </Box>
         </>
       );
+
+    case CurrencyModalView.importToken:
+      return (
+        importToken && (
+          <ImportToken
+            tokens={[importToken]}
+            handleCurrencySelect={onSelect}
+          />
+        )
+      );
     default:
       return null;
   }
@@ -266,14 +292,16 @@ function currencyKey(currency: Currency): string {
     : '';
 }
 
-export function CurrencyList({
+export function CurrencySearchList({
   onSelect,
   selectedCurrency,
   otherCurrency,
+  setImportToken,
 }: {
   selectedCurrency: Currency;
   otherCurrency: Currency;
   onSelect: (currency: Currency) => void;
+  setImportToken: (token: Token) => void;
 }) {
   const allTokens = useAllTokens();
   const setModalView = useUpdateAtom($currencyModalView);
@@ -281,8 +309,8 @@ export function CurrencyList({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const debouncedQuery = useDebounce(searchQuery, 200);
   // if they input an address, use it
-  const searchToken = useTokenSWR(debouncedQuery);
-  // const searchTokenIsAdded = useIsUserAddedToken(searchToken);
+  const { data: searchToken } = useTokenSWR(debouncedQuery);
+  const searchTokenIsAdded = useIsUserAddedToken(searchToken);
 
   const showETH: boolean = useMemo(() => {
     const s = debouncedQuery.toLowerCase().trim();
@@ -305,52 +333,55 @@ export function CurrencyList({
   );
 
   const { t } = useTranslation();
+  const [, setView] = useAtom($currencyModalView);
 
-  const Row = useCallback(
-    ({ data, index, style }: ListChildComponentProps<Token[]>) => {
-      const token = data[index];
-      const isSelected = Boolean(
-        selectedCurrency && currencyEquals(selectedCurrency, token),
-      );
-      const otherSelected = Boolean(
-        otherCurrency && currencyEquals(otherCurrency, token),
-      );
-      if (!token) {
-        return null;
-      }
-
-      return (
-        <StyledItem
-          onClick={() => onSelect(token)}
-          disabled={otherSelected}
-          selected={isSelected}
-          style={style}
-        >
-          <CurrencyListItem token={token} />
-        </StyledItem>
-      );
-    },
-    [onSelect, otherCurrency, selectedCurrency],
-  );
-
-  const itemKey: ListItemKeySelector<Token[]> = useCallback(
-    (index, item) => currencyKey(item[index]),
-    [],
+  // if no results on main list, show option to expand into inactive
+  const inactiveTokens = useFoundOnInactiveList(debouncedQuery);
+  const filteredInactiveTokens: Token[] = useSortedTokensByQuery(
+    inactiveTokens,
+    debouncedQuery,
   );
 
   return (
     <>
+      <Box css={{ px: '24px', pb: '24px' }}>
+        <Input
+          size="lg"
+          placeholder={t('Search name or paste address')}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </Box>
       <Box>
-        <List
-          height={390}
-          width="100%"
-          itemData={filteredSortedTokens}
-          itemCount={filteredSortedTokens.length}
-          itemSize={56}
-          itemKey={itemKey}
-        >
-          {Row}
-        </List>
+        {searchToken && !searchTokenIsAdded ? (
+          <Column css={{ padding: '20px 0', height: '100%' }}>
+            <ImportRow
+              token={searchToken}
+              showImportView={() =>
+                setView(CurrencyModalView.importToken)
+              }
+              setImportToken={setImportToken}
+            />
+          </Column>
+        ) : (
+          <CurrencyList
+            tokens={
+              filteredInactiveTokens
+                ? filteredSortedTokens.concat(filteredInactiveTokens)
+                : filteredSortedTokens
+            }
+            onSelect={onSelect}
+            breakIndex={
+              inactiveTokens && filteredSortedTokens
+                ? filteredSortedTokens.length
+                : undefined
+            }
+            otherCurrency={otherCurrency}
+            selectedCurrency={selectedCurrency}
+            showETH={showETH}
+            setImportToken={setImportToken}
+          />
+        )}
       </Box>
       <Button
         size="sm"
@@ -361,6 +392,158 @@ export function CurrencyList({
         {t('Manage Tokens')}
       </Button>
     </>
+  );
+}
+
+const FixedContentRow = styled('div', {
+  padding: '4px 20px',
+  height: 56,
+  display: 'grid',
+  gridGap: 16,
+  alignItems: 'center',
+});
+
+function CurrencyList({
+  tokens,
+  showETH = true,
+  onSelect,
+  selectedCurrency,
+  otherCurrency,
+  breakIndex,
+  setImportToken,
+}: {
+  tokens: Token[];
+  showETH?: boolean;
+  selectedCurrency: Currency;
+  otherCurrency: Currency;
+  onSelect: (currency: Currency) => void;
+  breakIndex?: number;
+  setImportToken: (token: Token) => void;
+}) {
+  const itemKey: ListItemKeySelector<(Currency | undefined)[]> =
+    useCallback(
+      (index, item) =>
+        !!item[index] ? currencyKey(item[index]!) : index,
+      [],
+    );
+
+  const itemData: (Currency | undefined)[] = useMemo(() => {
+    let formatted: (Currency | undefined)[] = showETH
+      ? [Currency.ETHER, ...tokens]
+      : tokens;
+    if (breakIndex !== undefined) {
+      formatted = [
+        ...formatted.slice(0, breakIndex),
+        undefined,
+        ...formatted.slice(breakIndex, formatted.length),
+      ];
+    }
+    return formatted;
+  }, [showETH, tokens, breakIndex]);
+
+  const inactiveTokens = useAllInactiveTokens();
+  const { t } = useTranslation();
+  const [, setView] = useAtom($currencyModalView);
+
+  const Row = useCallback(
+    ({
+      data,
+      index,
+      style,
+    }: ListChildComponentProps<(Currency | undefined)[]>) => {
+      const currency = data[index];
+      const isSelected = Boolean(
+        selectedCurrency &&
+          currency &&
+          currencyEquals(selectedCurrency, currency),
+      );
+      const otherSelected = Boolean(
+        otherCurrency &&
+          currency &&
+          currencyEquals(otherCurrency, currency),
+      );
+
+      const showImport =
+        inactiveTokens &&
+        currency &&
+        isCurrencyToken(currency) &&
+        Object.keys(inactiveTokens).includes(currency.address);
+
+      if (index === breakIndex || !data) {
+        return (
+          <FixedContentRow style={style}>
+            <Box
+              css={{
+                padding: '8px 12px',
+                br: '6px',
+                bc: '$background',
+                border: '1px solid $cardBorder',
+              }}
+            >
+              <RowBetween>
+                <Text size="sm">
+                  {t('Expanded results from inactive Token Lists')}
+                </Text>
+                <QuestionHelper
+                  text={t(
+                    "Tokens from inactive lists. Import specific tokens below or click 'Manage' to activate more lists.",
+                  )}
+                  css={{ ml: '$1' }}
+                />
+              </RowBetween>
+            </Box>
+          </FixedContentRow>
+        );
+      }
+
+      if (showImport && currency && isCurrencyToken(currency)) {
+        return (
+          <ImportRow
+            style={style}
+            token={currency}
+            showImportView={() =>
+              setView(CurrencyModalView.importToken)
+            }
+            setImportToken={setImportToken}
+            dim
+          />
+        );
+      }
+
+      return (
+        <StyledItem
+          onClick={() => onSelect(currency!)}
+          disabled={otherSelected}
+          selected={isSelected}
+          style={style}
+        >
+          <CurrencyListItem currency={currency!} />
+        </StyledItem>
+      );
+    },
+    [
+      breakIndex,
+      inactiveTokens,
+      onSelect,
+      otherCurrency,
+      selectedCurrency,
+      setImportToken,
+      setView,
+      t,
+    ],
+  );
+
+  return (
+    <List
+      height={390}
+      width="100%"
+      itemData={itemData}
+      itemCount={itemData.length}
+      itemSize={56}
+      itemKey={itemKey}
+    >
+      {Row}
+    </List>
   );
 }
 
@@ -392,15 +575,16 @@ const StyledItem = styled('div', {
   },
 });
 
-function CurrencyListItem({ token }: { token: Token }) {
-  const { data: balance, isValidating } = useCurrencyBalance(token);
+function CurrencyListItem({ currency }: { currency: Currency }) {
+  const { data: balance, isValidating } =
+    useCurrencyBalance(currency);
 
   return (
     <>
-      <CurrencyLogo currency={token} />
+      <CurrencyLogo currency={currency} />
       <Box css={{ textAlign: 'left' }}>
-        <Text>{token.symbol}</Text>
-        <Text>{token.name}</Text>
+        <Text>{currency.symbol}</Text>
+        <Text>{currency.name}</Text>
       </Box>
       <Flex
         css={{

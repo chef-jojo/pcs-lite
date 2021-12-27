@@ -10,6 +10,14 @@ export const textCss = css({
   color: '$text',
 
   variants: {
+    color: {
+      primary: {
+        color: '$primary',
+      },
+      text: {
+        color: '$text',
+      },
+    },
     size: {
       xs: {
         fontSize: '$1',

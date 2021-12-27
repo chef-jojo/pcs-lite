@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import React, { useState } from 'react';
 import { HelpIcon } from '@pcs/icons';
-import { styled, CSS } from '@pcs/ui';
+import { styled, CSS, Box } from '@pcs/ui';
 
 const BAD_SRCS: { [tokenAddress: string]: true } = {};
 
@@ -35,7 +35,11 @@ const Logo: React.FC<LogoProps> = ({ srcs, alt, ...rest }) => {
     );
   }
 
-  return <HelpIcon {...rest} />;
+  return (
+    <Box {...rest}>
+      <HelpIcon width={rest.width} height={rest.height} />
+    </Box>
+  );
 };
 
 export default Logo;

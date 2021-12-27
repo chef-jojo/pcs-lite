@@ -12,5 +12,8 @@ export * from './src/spinner';
 export * from './src/link';
 export * from './src/alert-modal';
 export * from './src/tooltip';
+export * from './src/tag';
+export * from './src/message';
+export * from './src/checkbox';
 
 export * from './stitches.config';
