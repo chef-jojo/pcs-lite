@@ -17,6 +17,12 @@ export const textCss = css({
       text: {
         color: '$text',
       },
+      textSubtle: {
+        color: '$textSubtle',
+      },
+      failure: {
+        color: '$failure',
+      },
     },
     size: {
       xs: {

@@ -271,14 +271,12 @@ export function CurrencySearch({
       );
 
     case CurrencyModalView.importToken:
-      return (
-        importToken && (
-          <ImportToken
-            tokens={[importToken]}
-            handleCurrencySelect={onSelect}
-          />
-        )
-      );
+      return importToken ? (
+        <ImportToken
+          tokens={[importToken]}
+          handleCurrencySelect={onSelect}
+        />
+      ) : null;
     default:
       return null;
   }
