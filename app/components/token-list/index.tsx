@@ -590,11 +590,8 @@ function CurrencyListItem({ currency }: { currency: Currency }) {
         }}
       >
         <Text
-          css={{
-            transition: 'opacity 0.2s ease-in-out',
-          }}
           style={{
-            opacity: isValidating ? 0.6 : 1,
+            opacity: isValidating ? 0.8 : 1,
           }}
         >
           {balance?.toSignificant(6)}

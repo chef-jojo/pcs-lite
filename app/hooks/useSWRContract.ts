@@ -84,8 +84,16 @@ export function useSWRContract<Data = any, Error = any>(
   config: SWRConfiguration<Data, Error> = {},
 ) {
   const [contract, methodName, inputs] = keys || [];
+  const serializedKeys =
+    contract && methodName
+      ? [
+          contract.address,
+          contract.interface.encodeFunctionData(methodName, inputs),
+        ]
+      : null;
+
   return useSWR<Data, Error>(
-    keys,
+    serializedKeys,
     async () => {
       if (!contract || !methodName) return null;
       if (!inputs) return contract[methodName]();
@@ -171,7 +179,9 @@ export const unstable_batchMiddleware = (<Data, Error>(
     );
 
     useEffect(() => {
-      store.batchSet(key);
+      if (key) {
+        store.batchSet(key);
+      }
     }, [key]);
 
     useEffect(() => {
@@ -272,12 +282,15 @@ export function unstable_useSWRContractBatchUpdater(
     null,
     (select) => select.batchKeys,
   );
+
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const multicallContract = useMulticallContract();
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   useInterval(
     async () => {
+      // find out why this keeps getting called
+      if (batchKeys.size === 0) return;
       const calls = Array.from(batchKeys.values())
         .filter(Boolean)
         .map((contractCall) => {

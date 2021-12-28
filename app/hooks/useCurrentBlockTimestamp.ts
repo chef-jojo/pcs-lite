@@ -8,7 +8,7 @@ export default function useCurrentBlockTimestamp() {
   const multicallContract = useMulticallContract();
   return useSWR(
     multicallContract && chainId
-      ? [chainId, multicallContract, 'getCurrentBlockTimestamp']
+      ? [chainId, 'getCurrentBlockTimestamp']
       : null,
     async () => {
       return multicallContract!.getCurrentBlockTimestamp();

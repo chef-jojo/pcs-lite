@@ -28,7 +28,6 @@ const RowWrapper = styled(Flex, {
 });
 
 export function ManageList() {
-  // const [listByUrls] = useAtom($listByUrls);
   const [activeListUrls, setActiveListUrls] = useAtom(
     $listActiveListUrls,
   );
