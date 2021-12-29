@@ -1,4 +1,5 @@
 import { Web3Provider } from '@ethersproject/providers';
+import { ChainId } from '@pancakeswap/sdk';
 
 const POLLING_INTERVAL = 12000;
 
@@ -9,7 +10,7 @@ export default function getLibrary(provider: any): Web3Provider {
       ? provider.chainId
       : typeof provider.chainId === 'string'
       ? parseInt(provider.chainId)
-      : 'any',
+      : ChainId.MAINNET,
   );
   library.pollingInterval = POLLING_INTERVAL;
   return library;

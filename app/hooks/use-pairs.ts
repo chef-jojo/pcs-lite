@@ -70,7 +70,7 @@ export function usePairs(
           new TokenAmount(token1, reserve1.toString()),
         ),
       ];
-    }) ?? [];
+    }) ?? calls.map(() => [PairState.LOADING, null]);
 
   return result;
 }

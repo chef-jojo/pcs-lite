@@ -18,10 +18,10 @@ export function useCurrency(
 }
 
 const useBNBBalanceSWR = (shouldFetched?: boolean) => {
-  const { library, account } = useActiveWeb3React();
+  const { library, account, chainId } = useActiveWeb3React();
   const { data: bigNumberData, ...result } = useSWR(
     library && account && shouldFetched
-      ? [account, library, 'bnbBalance']
+      ? [account, chainId, 'bnbBalance']
       : null,
     () => {
       return library?.getBalance(account!);

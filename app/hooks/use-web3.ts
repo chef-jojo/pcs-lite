@@ -1,7 +1,8 @@
 import { Web3Provider } from '@ethersproject/providers';
 import { ChainId } from '@pancakeswap/sdk';
 import { useWeb3React } from '@web3-react/core';
-import { atom } from 'jotai';
+import { Web3ReactContextInterface } from '@web3-react/core/dist/types';
+import { atom, useAtom } from 'jotai';
 import { useResetAtom, useUpdateAtom } from 'jotai/utils';
 import { useEffect, useState } from 'react';
 import {
@@ -10,9 +11,13 @@ import {
 } from '~/components/swap/hooks/use-swap-info';
 import { injected } from '~/config/connectors';
 
-export function useActiveWeb3React() {
+export function useActiveWeb3React(): Web3ReactContextInterface<Web3Provider> {
   const context = useWeb3React<Web3Provider>();
-  return context;
+  const [chainId] = useAtom($chainId);
+  return {
+    ...context,
+    chainId: context.chainId || chainId,
+  };
 }
 
 export function useEagerConnect() {
@@ -56,7 +61,9 @@ export function useInactiveListener(suppress: boolean = false) {
   const resetOutput = useResetAtom($outputCurrency);
 
   useEffect(() => {
-    setChainId(chainId);
+    if (chainId) {
+      setChainId(chainId);
+    }
     resetInput();
     resetOutput();
   }, [chainId, resetInput, resetOutput, setChainId]);

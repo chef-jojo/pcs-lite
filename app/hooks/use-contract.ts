@@ -24,12 +24,13 @@ function useContract(
   const { library, chainId, account } = useActiveWeb3React();
 
   return useMemo(() => {
-    if (!address || !ABI || !library) return null;
+    // ssr removed library
+    if (!address || !ABI) return null;
     try {
       return getContract(
         ABI,
         address,
-        withSignerIfPossible && account
+        withSignerIfPossible && account && library
           ? getProviderOrSigner(library, account)
           : getRpcProvider(chainId),
       );

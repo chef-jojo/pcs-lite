@@ -427,7 +427,7 @@ function CurrencyList({
 
   const itemData: (Currency | undefined)[] = useMemo(() => {
     let formatted: (Currency | undefined)[] = showETH
-      ? [Currency.ETHER, ...tokens]
+      ? [ETHER, ...tokens]
       : tokens;
     if (breakIndex !== undefined) {
       formatted = [

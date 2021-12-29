@@ -201,8 +201,6 @@ const Home: NextPage = () => {
     txHash,
   ]);
 
-  const { cache, mutate, ...extraConfig } = useSWRConfig();
-
   return (
     <Box
       css={{

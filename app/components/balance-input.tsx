@@ -50,9 +50,9 @@ export const CurrencyBalance: FC<{
   $otherCurrencyAddress: InputCurrencyAtom;
 }> = ({ $currencyAddress, $otherCurrencyAddress }) => {
   const [address, setAddress] = useAtom($currencyAddress);
-  const [orderAddress] = useAtom($otherCurrencyAddress);
+  const [otherAddress] = useAtom($otherCurrencyAddress);
   const currency = useCurrency(address);
-  const otherCurrency = useCurrency(orderAddress);
+  const otherCurrency = useCurrency(otherAddress);
   const { account } = useActiveWeb3React();
   const { data } = useCurrencyBalance(currency);
   const [open, setOpen] = useState(false);
@@ -62,13 +62,13 @@ export const CurrencyBalance: FC<{
       setAddress(
         isCurrencyToken(selectedCurrency)
           ? selectedCurrency.address
-          : currency === ETHER
+          : selectedCurrency === ETHER
           ? 'BNB'
           : '',
       );
       setOpen(false);
     },
-    [currency, setAddress],
+    [setAddress],
   );
 
   return (

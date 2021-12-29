@@ -1,27 +1,29 @@
 import { BigNumber, Contract, ethers } from 'ethers';
-import { Result } from 'ethers/lib/utils';
+import { FormatTypes, Result } from 'ethers/lib/utils';
 import { useEffect, useMemo, useRef } from 'react';
 import { unstable_batchedUpdates } from 'react-dom';
-import useSWR, { Middleware, SWRConfiguration, SWRHook } from 'swr';
+import useSWR, {
+  Middleware,
+  SWRConfiguration,
+  SWRHook,
+  unstable_serialize,
+} from 'swr';
 import { useSyncExternalStoreWithSelector } from 'use-sync-external-store/shim/with-selector';
 import { Call, MulticallOptions } from '~/utils/multicall';
 import { useMulticallContract } from './use-contract';
 
-const getCircularReplacer = () => {
-  const seen = new WeakSet();
-  return (key: string, value: any) => {
-    if (typeof value === 'object' && value !== null) {
-      if (seen.has(value)) {
-        return;
-      }
-      seen.add(value);
-    }
-    return value;
-  };
-};
+type ContractAddress = string;
+type ContractAbiFormat = string[];
+type ContractCallData = string;
 
-const stringify = (value: any) =>
-  JSON.stringify(value, getCircularReplacer());
+type UseSWRContractSerializeKeys = readonly [
+  ContractAddress,
+  ContractAbiFormat,
+  ContractMethodName,
+  ContractCallData,
+];
+
+const stringify = (value: any) => unstable_serialize(value);
 
 type MethodArg = string | number | BigNumber;
 type MethodArgs = Array<MethodArg | MethodArg[]>;
@@ -79,18 +81,28 @@ export const loggerMiddleware: Middleware = (useSWRNext) => {
   };
 };
 
+const serializesContractKey = (
+  key?: UseSWRContractKeys | null,
+): UseSWRContractSerializeKeys | null => {
+  const [contract, methodName, inputs] = key || [];
+  const serializedKeys =
+    key && contract && methodName
+      ? ([
+          contract.address,
+          contract.interface.format(FormatTypes.full) as string[],
+          methodName,
+          contract.interface.encodeFunctionData(methodName, inputs),
+        ] as const)
+      : null;
+  return serializedKeys;
+};
+
 export function useSWRContract<Data = any, Error = any>(
   keys?: UseSWRContractKeys | null,
   config: SWRConfiguration<Data, Error> = {},
 ) {
   const [contract, methodName, inputs] = keys || [];
-  const serializedKeys =
-    contract && methodName
-      ? [
-          contract.address,
-          contract.interface.encodeFunctionData(methodName, inputs),
-        ]
-      : null;
+  const serializedKeys = serializesContractKey(keys);
 
   return useSWR<Data, Error>(
     serializedKeys,
@@ -163,42 +175,51 @@ export const unstable_batchMiddleware = (<Data, Error>(
     useSWRNext: SWRHook,
   ) =>
   (
-    key: UseSWRContractKeys,
+    key: UseSWRContractSerializeKeys,
     _: any,
     config?: SWRConfiguration,
   ): any => {
-    const { data, error, mutate } = useSWRNext(key, null, config);
+    const stringKey = useMemo(
+      () => (key ? stringify(key) : null),
+      [key],
+    );
+    const swr = useSWRNext(
+      key,
+      () => {
+        if (key) {
+          store.batchSet(key);
+          return store.getState().currentState.get(stringKey!);
+        }
+      },
+      config,
+    );
 
-    const stringKey = useMemo(() => stringify(key), [key]);
+    const { data, mutate } = swr;
 
     const value = useSyncExternalStoreWithSelector(
       store.subscribe,
       store.getState,
       null,
-      (select) => select.currentState.get(stringKey),
+      (select) =>
+        stringKey ? select.currentState.get(stringKey) : null,
     );
-
-    useEffect(() => {
-      if (key) {
-        store.batchSet(key);
-      }
-    }, [key]);
+    console.trace(value, 'value', data, key);
 
     useEffect(() => {
       if (value) {
-        mutate(value);
-        store.batchDelete(key);
+        mutate(value, { revalidate: false });
+        store.deleteValues(stringKey!);
       }
-    }, [key, mutate, value]);
+    }, [mutate, value, stringKey]);
 
-    return { data, error };
+    return Object.assign({}, swr, { data: value || data });
   }) as Middleware;
 
 const store = createMulticallStore();
 
 function createMulticallStore() {
   const listeners = new Set<Function>();
-  let batchKeys = new Map<string, UseSWRContractKeys>();
+  let batchKeys = new Map<string, UseSWRContractSerializeKeys>();
   let currentState = new Map<string, any>();
 
   const update = () => {
@@ -208,11 +229,11 @@ function createMulticallStore() {
   };
 
   return {
-    batchSet(multicallKey: UseSWRContractKeys) {
+    batchSet(multicallKey: UseSWRContractSerializeKeys) {
       batchKeys.set(stringify(multicallKey), multicallKey);
       update();
     },
-    batchDelete(multicallKey: UseSWRContractKeys) {
+    batchDelete(multicallKey: UseSWRContractSerializeKeys) {
       batchKeys.delete(stringify(multicallKey));
       update();
     },
@@ -224,6 +245,10 @@ function createMulticallStore() {
       for (const value of values) {
         currentState.set(value.key, value.value);
       }
+      update();
+    },
+    deleteValues(key: string) {
+      currentState.delete(key);
       update();
     },
     subscribe(listener: Function) {
@@ -273,7 +298,7 @@ export default function useInterval(
 }
 
 export function unstable_useSWRContractBatchUpdater(
-  delay: number = 100,
+  delay: number = 300,
 ) {
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const batchKeys = useSyncExternalStoreWithSelector(
@@ -294,16 +319,13 @@ export function unstable_useSWRContractBatchUpdater(
       const calls = Array.from(batchKeys.values())
         .filter(Boolean)
         .map((contractCall) => {
-          const [contract, methodName, input] = contractCall;
+          const [address, abi, methodName, callData] = contractCall;
           return {
             key: contractCall,
-            contract,
+            abi,
             methodName,
-            address: contract?.address,
-            callData: contract?.interface.encodeFunctionData(
-              methodName,
-              input,
-            ),
+            address,
+            callData,
           };
         });
       store.batchClear();
@@ -320,14 +342,12 @@ export function unstable_useSWRContractBatchUpdater(
           .then((res) => {
             const [blockNumber, blockHash, returnData] = res;
             return (returnData as Result[]).map((call, i) => {
-              const { contract, methodName, key } = calls[i];
+              const { abi, key, methodName } = calls[i];
+              const itf = new ethers.utils.Interface(abi);
               const [result, data] = call;
               return result && data !== '0x'
                 ? {
-                    value: contract?.interface.decodeFunctionResult(
-                      methodName,
-                      data,
-                    ),
+                    value: itf.decodeFunctionResult(methodName, data),
                     key: stringify(key),
                   }
                 : null;
@@ -340,6 +360,6 @@ export function unstable_useSWRContractBatchUpdater(
       }
     },
     batchKeys.size > 0 ? delay : null,
-    false,
+    true,
   );
 }

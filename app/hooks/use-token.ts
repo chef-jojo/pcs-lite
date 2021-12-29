@@ -64,6 +64,7 @@ export function useTokenBalanceSWR(token?: Token) {
   const address = isAddress(token?.address);
   const tokenContract = useTokenContract(
     address ? address : undefined,
+    false,
   );
   const { data: bigNumberData, ...result } = useSWRContract(
     chainId && account && tokenContract
