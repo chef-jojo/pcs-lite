@@ -32,3 +32,6 @@ yarn-error.log*
 .turbo
 
 dist
+
+#typechain
+app/config/abi/types

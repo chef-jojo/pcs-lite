@@ -7,30 +7,21 @@ import useSWR, {
   SWRConfiguration,
   SWRHook,
   unstable_serialize,
+  SWRResponse,
 } from 'swr';
 import { useSyncExternalStoreWithSelector } from 'use-sync-external-store/shim/with-selector';
+import { Erc20 } from '~/config/abi/types';
 import { Call, MulticallOptions } from '~/utils/multicall';
 import { useMulticallContract } from './use-contract';
 
-type ContractAddress = string;
-type ContractAbiFormat = string[];
-type ContractCallData = string;
-
-type UseSWRContractSerializeKeys = readonly [
-  ContractAddress,
-  ContractAbiFormat,
-  ContractMethodName,
-  ContractCallData,
-];
+type UseSWRContractSerializeKeys = {
+  address: string;
+  interfaceFormat: string[];
+  methodName: string;
+  callData: string;
+};
 
 const stringify = (value: any) => unstable_serialize(value);
-
-type MethodArg = string | number | BigNumber;
-type MethodArgs = Array<MethodArg | MethodArg[]>;
-
-type OptionalMethodInputs =
-  | Array<MethodArg | MethodArg[] | undefined>
-  | undefined;
 
 // integrated with address and chainId
 export function useMultiCall<Data = any, Error = any>(
@@ -49,14 +40,38 @@ export function useMultiCall<Data = any, Error = any>(
   );
 }
 
-type MaybeContract = Contract | null | undefined;
-type ContractMethodName = string;
+type MaybeContract<C extends Contract = Contract> =
+  | C
+  | null
+  | undefined;
+type ContractMethodName<C extends Contract = Contract> =
+  keyof C['functions'] & string;
 
-type UseSWRContractKeys = [
-  MaybeContract,
-  ContractMethodName,
-  OptionalMethodInputs,
-];
+type ContractMethodParams<
+  C extends Contract = Contract,
+  N extends ContractMethodName<C> = ContractMethodName<C>,
+> = Parameters<C['functions'][N]>;
+
+type UseSWRContractArrayKey<
+  C extends Contract = Contract,
+  N extends ContractMethodName<C> = any,
+> =
+  | [MaybeContract<C>, N, ContractMethodParams<C, N>]
+  | [MaybeContract<C>, N];
+
+export type UseSWRContractObjectKey<
+  C extends Contract = Contract,
+  N extends ContractMethodName<C> = ContractMethodName<C>,
+> = {
+  contract: MaybeContract<C>;
+  methodName: N;
+  params?: ContractMethodParams<C, N>;
+};
+
+type UseSWRContractKey<
+  T extends Contract = Contract,
+  N extends ContractMethodName<T> = any,
+> = UseSWRContractArrayKey<T, N> | UseSWRContractObjectKey<T, N>;
 
 export const immutableMiddleware: Middleware =
   (useSWRNext) => (key, fetcher, config) => {
@@ -81,38 +96,99 @@ export const loggerMiddleware: Middleware = (useSWRNext) => {
   };
 };
 
-const serializesContractKey = (
-  key?: UseSWRContractKeys | null,
+export enum FetchStatus {
+  Idle = 'IDLE',
+  Fetching = 'FETCHING',
+  Fetched = 'FETCHED',
+  Failed = 'FAILED',
+  Revalidating = 'REVALIDATING',
+}
+
+export const fetchStatusMiddleware: Middleware = (useSWRNext) => {
+  return (key, fetcher, config) => {
+    const swr = useSWRNext(key, fetcher, config);
+    let status = FetchStatus.Idle;
+
+    if (!swr.isValidating && !swr.error && !swr.data) {
+      status = FetchStatus.Idle;
+    } else if (swr.isValidating && !swr.error && !swr.data) {
+      status = FetchStatus.Fetching;
+    } else if (swr.data) {
+      status = FetchStatus.Fetched;
+    } else if (swr.error && !swr.data) {
+      status = FetchStatus.Failed;
+    } else if (swr.isValidating && swr.data) {
+      status = FetchStatus.Revalidating;
+    }
+
+    return {
+      status,
+      ...swr,
+    };
+  };
+};
+
+const getContractKey = <
+  T extends Contract = Contract,
+  N extends ContractMethodName<T> = any,
+>(
+  key?: UseSWRContractKey<T, N> | null,
+) => {
+  if (Array.isArray(key)) {
+    const [contract, methodName, params] = key || [];
+    return {
+      contract,
+      methodName,
+      params,
+    };
+  }
+  return key;
+};
+
+const serializesContractKey = <T extends Contract = Contract>(
+  key?: UseSWRContractKey<T> | null,
 ): UseSWRContractSerializeKeys | null => {
-  const [contract, methodName, inputs] = key || [];
+  const { contract, methodName, params } = getContractKey(key) || {};
   const serializedKeys =
     key && contract && methodName
-      ? ([
-          contract.address,
-          contract.interface.format(FormatTypes.full) as string[],
+      ? {
+          address: contract.address,
+          interfaceFormat: contract.interface.format(
+            FormatTypes.full,
+          ) as string[],
           methodName,
-          contract.interface.encodeFunctionData(methodName, inputs),
-        ] as const)
+          callData: contract.interface.encodeFunctionData(
+            methodName,
+            params,
+          ),
+        }
       : null;
   return serializedKeys;
 };
 
-export function useSWRContract<Data = any, Error = any>(
-  keys?: UseSWRContractKeys | null,
+export function useSWRContract<
+  Error = any,
+  T extends Contract = Contract,
+  N extends ContractMethodName<T> = ContractMethodName<T>,
+  Data = Awaited<ReturnType<T['functions'][N]>>,
+>(
+  key?: UseSWRContractKey<T, N> | null,
   config: SWRConfiguration<Data, Error> = {},
 ) {
-  const [contract, methodName, inputs] = keys || [];
-  const serializedKeys = serializesContractKey(keys);
+  const { contract, methodName, params } = getContractKey(key) || {};
+  const serializedKeys = serializesContractKey(key);
 
   return useSWR<Data, Error>(
     serializedKeys,
     async () => {
       if (!contract || !methodName) return null;
-      if (!inputs) return contract[methodName]();
-      return contract[methodName](...inputs);
+      if (!params) return contract[methodName]();
+      return contract[methodName](...params);
     },
-    config,
-  );
+    { ...config, use: [fetchStatusMiddleware] },
+  ) as SWRResponse<Data, Error> & {
+    status: FetchStatus;
+  };
 }
 
 export function useSWRMultiCall<Data = any, Error = any>(
@@ -319,10 +395,15 @@ export function unstable_useSWRContractBatchUpdater(
       const calls = Array.from(batchKeys.values())
         .filter(Boolean)
         .map((contractCall) => {
-          const [address, abi, methodName, callData] = contractCall;
+          const {
+            address,
+            callData,
+            interfaceFormat: interfaceFormaat,
+            methodName,
+          } = contractCall;
           return {
             key: contractCall,
-            abi,
+            abi: interfaceFormaat,
             methodName,
             address,
             callData,
@@ -337,7 +418,10 @@ export function unstable_useSWRContractBatchUpdater(
         multicallContract.functions
           .tryBlockAndAggregate(
             false,
-            calls.map((c) => [c.address, c.callData]),
+            calls.map((c) => ({
+              target: c.address,
+              callData: c.callData,
+            })),
           )
           .then((res) => {
             const [blockNumber, blockHash, returnData] = res;

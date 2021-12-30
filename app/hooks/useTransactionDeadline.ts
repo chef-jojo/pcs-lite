@@ -11,7 +11,9 @@ export default function useTransactionDeadline():
   const [ttl] = useAtom($userDeadLine);
   const { data: blockTimestamp } = useCurrentBlockTimestamp();
   return useMemo(() => {
-    if (blockTimestamp && ttl) return blockTimestamp.add(ttl);
+    if (blockTimestamp && ttl)
+      // @ts-ignore FIXME: blockTimestamp should be object instead of big number
+      return blockTimestamp.add(ttl);
     return undefined;
   }, [blockTimestamp, ttl]);
 }

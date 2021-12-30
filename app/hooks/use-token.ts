@@ -2,6 +2,7 @@ import { ChainId, JSBI, Token, TokenAmount } from '@pancakeswap/sdk';
 import { useMemo } from 'react';
 import useSWR from 'swr';
 import useSWRImmutable from 'swr/immutable';
+import { Erc20 } from '~/config/abi/types';
 import { getContract } from '~/utils/contract-helper';
 import { isAddress } from '~/utils/is-address';
 import { Call } from '~/utils/multicall';
@@ -13,11 +14,12 @@ import {
   unstable_batchMiddleware,
   useMultiCall,
   useSWRContract,
+  UseSWRContractObjectKey,
 } from './useSWRContract';
 import { useAllTokens } from './useTokenList';
 
 const getToken = async (chainId: ChainId, tokenAddress: string) => {
-  const tokenContract = getContract(
+  const tokenContract = getContract<Erc20>(
     ERC20_ABI,
     tokenAddress,
     getRpcProvider(chainId),
@@ -35,7 +37,7 @@ const getTokenBalance = async (
   account: string,
   chainId: ChainId,
 ) => {
-  const tokenContract = getContract(
+  const tokenContract = getContract<Erc20>(
     ERC20_ABI,
     tokenAddress,
     getRpcProvider(chainId),
@@ -66,9 +68,14 @@ export function useTokenBalanceSWR(token?: Token) {
     address ? address : undefined,
     false,
   );
+
   const { data: bigNumberData, ...result } = useSWRContract(
     chainId && account && tokenContract
-      ? [tokenContract, 'balanceOf', [account]]
+      ? {
+          contract: tokenContract,
+          methodName: 'balanceOf',
+          params: [account],
+        }
       : null,
     {
       // use: [unstable_batchMiddleware],

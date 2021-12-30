@@ -6,6 +6,7 @@ import {
   useInactiveListener,
 } from '~/hooks/use-web3';
 import {
+  fetchStatusMiddleware,
   loggerMiddleware,
   unstable_useSWRContractBatchUpdater,
 } from '~/hooks/useSWRContract';

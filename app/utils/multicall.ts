@@ -1,5 +1,6 @@
 import { ChainId } from '@pancakeswap/sdk';
 import { ethers } from 'ethers';
+import { CallStruct } from '~/config/abi/types/Multicall';
 import { getMulticallContract } from '~/utils/contract-helper';
 
 export interface Call {
@@ -24,12 +25,12 @@ export const multicall = async <T = any>(
   const multi = getMulticallContract(chainId);
   const itf = new ethers.utils.Interface(abi);
 
-  const calldata = calls.map((call) => [
-    call.address.toLowerCase(),
-    itf.encodeFunctionData(call.name, call.params),
-  ]);
+  const calldata = calls.map((call) => ({
+    target: call.address.toLowerCase(),
+    callData: itf.encodeFunctionData(call.name, call.params),
+  })) as CallStruct[];
   const returnData = await multi.tryAggregate(
-    requireSuccess,
+    requireSuccess!,
     calldata,
   );
   // @ts-ignore
@@ -44,5 +45,5 @@ export const multicall = async <T = any>(
     }
   });
 
-  return res;
+  return res as any;
 };
