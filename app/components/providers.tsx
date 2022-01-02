@@ -5,11 +5,7 @@ import {
   useEagerConnect,
   useInactiveListener,
 } from '~/hooks/use-web3';
-import {
-  fetchStatusMiddleware,
-  loggerMiddleware,
-  unstable_useSWRContractBatchUpdater,
-} from '~/hooks/useSWRContract';
+import { loggerMiddleware } from '~/hooks/useSWRContract';
 import getLibrary from '~/utils/get-library';
 
 export const Providers: FC = ({ children }) => {
@@ -33,6 +29,5 @@ export const Providers: FC = ({ children }) => {
 function Connect() {
   useEagerConnect();
   useInactiveListener();
-  unstable_useSWRContractBatchUpdater();
   return null;
 }

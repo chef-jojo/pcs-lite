@@ -1,16 +1,14 @@
-import { BigNumber, Contract, ethers } from 'ethers';
+import { Contract, ethers } from 'ethers';
 import { FormatTypes, Result } from 'ethers/lib/utils';
-import { useEffect, useMemo, useRef } from 'react';
-import { unstable_batchedUpdates } from 'react-dom';
 import useSWR, {
   Middleware,
   SWRConfiguration,
   SWRHook,
-  unstable_serialize,
   SWRResponse,
 } from 'swr';
-import { useSyncExternalStoreWithSelector } from 'use-sync-external-store/shim/with-selector';
-import { Erc20 } from '~/config/abi/types';
+import { Multicall } from '~/config/abi/types';
+import { CallStruct } from '~/config/abi/types/Multicall';
+import { getMulticallContract } from '~/utils/contract-helper';
 import { Call, MulticallOptions } from '~/utils/multicall';
 import { useMulticallContract } from './use-contract';
 
@@ -20,8 +18,6 @@ type UseSWRContractSerializeKeys = {
   methodName: string;
   callData: string;
 };
-
-const stringify = (value: any) => unstable_serialize(value);
 
 // integrated with address and chainId
 export function useMultiCall<Data = any, Error = any>(
@@ -45,12 +41,12 @@ type MaybeContract<C extends Contract = Contract> =
   | null
   | undefined;
 type ContractMethodName<C extends Contract = Contract> =
-  keyof C['functions'] & string;
+  keyof C['callStatic'] & string;
 
 type ContractMethodParams<
   C extends Contract = Contract,
   N extends ContractMethodName<C> = ContractMethodName<C>,
-> = Parameters<C['functions'][N]>;
+> = Parameters<C['callStatic'][N]>;
 
 type UseSWRContractArrayKey<
   C extends Contract = Contract,
@@ -145,8 +141,78 @@ const getContractKey = <
   return key;
 };
 
+interface PendingCall {
+  key: UseSWRContractSerializeKeys;
+  resolve: any;
+  reject: any;
+}
+
+class BatchFetcher<MC extends Multicall = Multicall> {
+  _timer?: NodeJS.Timeout;
+  _pendingCalls: PendingCall[] = [];
+  multiCallContract: MaybeContract<MC>;
+  constructor(multiCallContract: MC) {
+    this.multiCallContract = multiCallContract;
+  }
+
+  add(key: UseSWRContractSerializeKeys) {
+    const inflightRequest: PendingCall = {
+      key,
+      resolve: null,
+      reject: null,
+    };
+    const promise = new Promise((resolve, reject) => {
+      inflightRequest.resolve = resolve;
+      inflightRequest.reject = reject;
+    });
+    this._pendingCalls.push(inflightRequest);
+
+    if (!this._timer) {
+      this._timer = setTimeout(() => {
+        console.log(this._pendingCalls, '_pendingCalls');
+        const pendingCalls = this._pendingCalls;
+        this._timer = undefined;
+        this._pendingCalls = [];
+
+        const batchCalls = pendingCalls.map((c) => ({
+          target: c.key.address,
+          callData: c.key.callData,
+        }));
+        console.debug('Batch fetching', batchCalls);
+        this.multiCallContract
+          ?.tryBlockAndAggregate(false, batchCalls)
+          .then((res) => {
+            const [blockNumber, blockHash, returnData] = res;
+            return (returnData as Result[]).map((call, i) => {
+              const { methodName, interfaceFormat } =
+                pendingCalls[i].key;
+              const itf = new ethers.utils.Interface(interfaceFormat);
+              const [result, data] = call;
+              return result && data !== '0x'
+                ? itf.decodeFunctionResult(methodName, data)
+                : null;
+            });
+          })
+          .then((results) => {
+            pendingCalls.forEach((call, i) => {
+              const result = results[i];
+              if (result) {
+                call.resolve(result);
+              } else {
+                call.reject(new Error('Failed to fetch'));
+              }
+            });
+          });
+      }, 10);
+    }
+
+    return promise;
+  }
+}
+
 const serializesContractKey = <T extends Contract = Contract>(
   key?: UseSWRContractKey<T> | null,
+  afterSuccess?: Function,
 ): UseSWRContractSerializeKeys | null => {
   const { contract, methodName, params } = getContractKey(key) || {};
   const serializedKeys =
@@ -161,6 +227,9 @@ const serializesContractKey = <T extends Contract = Contract>(
             methodName,
             params,
           ),
+          ...(afterSuccess && {
+            afterSuccess: JSON.stringify(afterSuccess),
+          }),
         }
       : null;
   return serializedKeys;
@@ -170,42 +239,82 @@ export function useSWRContract<
   Error = any,
   T extends Contract = Contract,
   N extends ContractMethodName<T> = ContractMethodName<T>,
-  Data = Awaited<ReturnType<T['functions'][N]>>,
+  ProcessData = any,
+>(
+  key: UseSWRContractKey<T, N> | null,
+  config: SWRConfiguration<ProcessData, Error> & {
+    afterSuccess: (
+      data: Awaited<ReturnType<T['callStatic'][N]>>,
+    ) => ProcessData;
+  },
+): SWRResponse<ProcessData, Error> & {
+  status: FetchStatus;
+};
+
+export function useSWRContract<
+  Error = any,
+  T extends Contract = Contract,
+  N extends ContractMethodName<T> = ContractMethodName<T>,
+  ProcessData = Awaited<ReturnType<T['callStatic'][N]>>,
 >(
   key?: UseSWRContractKey<T, N> | null,
-  config: SWRConfiguration<Data, Error> = {},
+  config?: SWRConfiguration<ProcessData, Error>,
+): SWRResponse<ProcessData, Error> & {
+  status: FetchStatus;
+};
+
+export function useSWRContract<
+  Error = any,
+  T extends Contract = Contract,
+  N extends ContractMethodName<T> = ContractMethodName<T>,
+  ProcessData = any,
+>(
+  key?: UseSWRContractKey<T, N> | null,
+  config: SWRConfiguration<ProcessData, Error> & {
+    afterSuccess?: (
+      data: Awaited<ReturnType<T['callStatic'][N]>>,
+    ) => ProcessData;
+  } = {
+    afterSuccess: (t) => t,
+  },
 ) {
+  const { afterSuccess = (t) => t, ...restConfig } = config;
   const { contract, methodName, params } = getContractKey(key) || {};
   const serializedKeys = serializesContractKey(key);
 
-  return useSWR<Data, Error>(
+  const swr = useSWR(
     serializedKeys,
     async () => {
-      if (!contract || !methodName) return null;
-      if (!params) return contract[methodName]();
-      return contract[methodName](...params);
+      if (!methodName || !contract) return null;
+      return afterSuccess(
+        contract[methodName].apply(contract, params),
+      );
     },
-    { ...config, use: [fetchStatusMiddleware] },
-  ) as SWRResponse<Data, Error> & {
+    {
+      ...restConfig,
+      use: [fetchStatusMiddleware, ...(restConfig.use ?? [])],
+    },
+  );
+  return swr as SWRResponse<ProcessData, Error> & {
     status: FetchStatus;
   };
 }
 
 export function useSWRMultiCall<Data = any, Error = any>(
-  multicallContract: Contract | null | undefined,
+  multicallContract: Multicall | null | undefined,
   abi: any[],
   calls?: Call[] | null,
   options: MulticallOptions = { requireSuccess: true },
   config: SWRConfiguration<Data, Error> = {},
 ) {
-  const { requireSuccess } = options;
+  const { requireSuccess = true } = options;
 
   const itf = new ethers.utils.Interface(abi);
-  const calldata =
-    calls?.map((call) => [
-      call.address.toLowerCase(),
-      itf.encodeFunctionData(call.name, call.params),
-    ]) ?? [];
+  const calldata: CallStruct[] =
+    calls?.map((call) => ({
+      target: call.address.toLowerCase(),
+      callData: itf.encodeFunctionData(call.name, call.params),
+    })) ?? [];
 
   const swrResult = useSWR(
     calls && Boolean(calls.length) ? [abi, calls] : null,
@@ -247,6 +356,8 @@ export function useSWRMultiCall<Data = any, Error = any>(
   return swrResult;
 }
 
+const batchFetcher = new BatchFetcher(getMulticallContract());
+
 export const unstable_batchMiddleware = (<Data, Error>(
     useSWRNext: SWRHook,
   ) =>
@@ -255,195 +366,13 @@ export const unstable_batchMiddleware = (<Data, Error>(
     _: any,
     config?: SWRConfiguration,
   ): any => {
-    const stringKey = useMemo(
-      () => (key ? stringify(key) : null),
-      [key],
-    );
     const swr = useSWRNext(
       key,
-      () => {
-        if (key) {
-          store.batchSet(key);
-          return store.getState().currentState.get(stringKey!);
-        }
+      async (args) => {
+        return batchFetcher.add(args);
       },
       config,
     );
 
-    const { data, mutate } = swr;
-
-    const value = useSyncExternalStoreWithSelector(
-      store.subscribe,
-      store.getState,
-      null,
-      (select) =>
-        stringKey ? select.currentState.get(stringKey) : null,
-    );
-    console.trace(value, 'value', data, key);
-
-    useEffect(() => {
-      if (value) {
-        mutate(value, { revalidate: false });
-        store.deleteValues(stringKey!);
-      }
-    }, [mutate, value, stringKey]);
-
-    return Object.assign({}, swr, { data: value || data });
+    return swr;
   }) as Middleware;
-
-const store = createMulticallStore();
-
-function createMulticallStore() {
-  const listeners = new Set<Function>();
-  let batchKeys = new Map<string, UseSWRContractSerializeKeys>();
-  let currentState = new Map<string, any>();
-
-  const update = () => {
-    unstable_batchedUpdates(() => {
-      listeners.forEach((listener) => listener());
-    });
-  };
-
-  return {
-    batchSet(multicallKey: UseSWRContractSerializeKeys) {
-      batchKeys.set(stringify(multicallKey), multicallKey);
-      update();
-    },
-    batchDelete(multicallKey: UseSWRContractSerializeKeys) {
-      batchKeys.delete(stringify(multicallKey));
-      update();
-    },
-    batchClear() {
-      batchKeys.clear();
-      update();
-    },
-    setValues(values: { key: string; value: any }[]) {
-      for (const value of values) {
-        currentState.set(value.key, value.value);
-      }
-      update();
-    },
-    deleteValues(key: string) {
-      currentState.delete(key);
-      update();
-    },
-    subscribe(listener: Function) {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
-    getState() {
-      return {
-        batchKeys,
-        currentState,
-      };
-    },
-    getSubscriberCount() {
-      return listeners.size;
-    },
-  };
-}
-
-export default function useInterval(
-  callback: () => void,
-  delay: null | number,
-  leading = true,
-) {
-  const savedCallback = useRef<() => void>();
-
-  // Remember the latest callback.
-  useEffect(() => {
-    savedCallback.current = callback;
-  }, [callback]);
-
-  // Set up the interval.
-  useEffect(() => {
-    function tick() {
-      const { current } = savedCallback;
-      if (current) {
-        current();
-      }
-    }
-
-    if (delay !== null) {
-      if (leading) tick();
-      const id = setInterval(tick, delay);
-      return () => clearInterval(id);
-    }
-    return undefined;
-  }, [delay, leading]);
-}
-
-export function unstable_useSWRContractBatchUpdater(
-  delay: number = 300,
-) {
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const batchKeys = useSyncExternalStoreWithSelector(
-    store.subscribe,
-    store.getState,
-    null,
-    (select) => select.batchKeys,
-  );
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const multicallContract = useMulticallContract();
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  useInterval(
-    async () => {
-      // find out why this keeps getting called
-      if (batchKeys.size === 0) return;
-      const calls = Array.from(batchKeys.values())
-        .filter(Boolean)
-        .map((contractCall) => {
-          const {
-            address,
-            callData,
-            interfaceFormat: interfaceFormaat,
-            methodName,
-          } = contractCall;
-          return {
-            key: contractCall,
-            abi: interfaceFormaat,
-            methodName,
-            address,
-            callData,
-          };
-        });
-      store.batchClear();
-      if (calls.length === 0) {
-        return;
-      }
-      console.log(calls, 'calls');
-      if (multicallContract) {
-        multicallContract.functions
-          .tryBlockAndAggregate(
-            false,
-            calls.map((c) => ({
-              target: c.address,
-              callData: c.callData,
-            })),
-          )
-          .then((res) => {
-            const [blockNumber, blockHash, returnData] = res;
-            return (returnData as Result[]).map((call, i) => {
-              const { abi, key, methodName } = calls[i];
-              const itf = new ethers.utils.Interface(abi);
-              const [result, data] = call;
-              return result && data !== '0x'
-                ? {
-                    value: itf.decodeFunctionResult(methodName, data),
-                    key: stringify(key),
-                  }
-                : null;
-            });
-          })
-          .then((r) => {
-            // @ts-ignore
-            store.setValues(r);
-          });
-      }
-    },
-    batchKeys.size > 0 ? delay : null,
-    true,
-  );
-}

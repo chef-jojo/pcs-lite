@@ -10,7 +10,7 @@ function Test() {
 
   return (
     <>
-      {Array.from({ length: 1 }).map((_, i) => (
+      {Array.from({ length: 10 }).map((_, i) => (
         <CurrencyBalance key={i} currency={cake} />
       ))}
     </>

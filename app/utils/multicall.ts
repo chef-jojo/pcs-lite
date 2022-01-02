@@ -21,7 +21,7 @@ export const multicall = async <T = any>(
   options: MulticallOptions = { requireSuccess: true },
   chainId = ChainId.MAINNET,
 ): Promise<MultiCallResponse<T>> => {
-  const { requireSuccess } = options;
+  const { requireSuccess = true } = options;
   const multi = getMulticallContract(chainId);
   const itf = new ethers.utils.Interface(abi);
 
@@ -30,7 +30,7 @@ export const multicall = async <T = any>(
     callData: itf.encodeFunctionData(call.name, call.params),
   })) as CallStruct[];
   const returnData = await multi.tryAggregate(
-    requireSuccess!,
+    requireSuccess,
     calldata,
   );
   // @ts-ignore
