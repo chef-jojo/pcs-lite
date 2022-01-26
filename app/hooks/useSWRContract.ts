@@ -316,7 +316,7 @@ export function useSWRMultiCall<Data = any, Error = any>(
       callData: itf.encodeFunctionData(call.name, call.params),
     })) ?? [];
 
-  const swrResult = useSWR<Data, Error>(
+  const swrResult = useSWR(
     calls && Boolean(calls.length) ? [abi, calls] : null,
     async () => {
       console.debug('multicall', calls);
