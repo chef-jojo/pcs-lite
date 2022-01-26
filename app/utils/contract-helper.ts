@@ -1,9 +1,13 @@
 import { ChainId } from '@pancakeswap/sdk';
 import { Contract, ethers } from 'ethers';
 import MultiCallAbi from '~/config/abi/Multicall.json';
-import { Multicall } from '~/config/abi/types';
-import { getMulticallAddress } from './address-helpers';
+import { ChainlinkOracle, Multicall } from '~/config/abi/types';
+import {
+  getChainlinkOracleAddress,
+  getMulticallAddress,
+} from './address-helpers';
 import { getRpcProvider } from './rpc';
+import chainlinkOracleAbi from 'config/abi/chainlinkOracle.json';
 
 export const getContract = <T extends Contract = Contract>(
   abi: any,
@@ -22,4 +26,15 @@ export const getMulticallContract = (
     getMulticallAddress(chainId),
     signer ?? getRpcProvider(chainId),
   );
+};
+
+export const getChainlinkOracleContract = (
+  signer?: ethers.Signer | ethers.providers.Provider,
+  chainId = ChainId.MAINNET,
+) => {
+  return getContract(
+    chainlinkOracleAbi,
+    getChainlinkOracleAddress(),
+    signer ?? getRpcProvider(chainId),
+  ) as ChainlinkOracle;
 };

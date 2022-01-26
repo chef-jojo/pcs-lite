@@ -16,3 +16,7 @@ export const getAddress = (
 export const getMulticallAddress = (chainId = ChainId.MAINNET) => {
   return getAddress(addresses.multiCall, chainId);
 };
+
+export const getChainlinkOracleAddress = () => {
+  return getAddress(addresses.chainlinkOracle);
+};

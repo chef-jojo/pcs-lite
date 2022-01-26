@@ -27,7 +27,7 @@ export function useMultiCall<Data = any, Error = any>(
   config: SWRConfiguration<Data, Error> = {},
 ) {
   const multicallContract = useMulticallContract();
-  return useSWRMultiCall(
+  return useSWRMultiCall<Data, Error>(
     multicallContract,
     abi,
     calls,
@@ -316,7 +316,7 @@ export function useSWRMultiCall<Data = any, Error = any>(
       callData: itf.encodeFunctionData(call.name, call.params),
     })) ?? [];
 
-  const swrResult = useSWR(
+  const swrResult = useSWR<Data, Error>(
     calls && Boolean(calls.length) ? [abi, calls] : null,
     async () => {
       console.debug('multicall', calls);

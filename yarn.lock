@@ -5306,6 +5306,11 @@ dataloader@2.0.0:
   resolved "https://registry.yarnpkg.com/dataloader/-/dataloader-2.0.0.tgz#41eaf123db115987e21ca93c005cd7753c55fe6f"
   integrity sha512-YzhyDAwA4TaQIhM5go+vCLmU0UikghC/t9DTQYZR2M/UvZ1MdOhPezSDZcjj9uqQJOMqjLcpWtyW2iNINdlatQ==
 
+date-fns@^2.28.0:
+  version "2.28.0"
+  resolved "https://registry.yarnpkg.com/date-fns/-/date-fns-2.28.0.tgz#9570d656f5fc13143e50c975a3b6bbeb46cd08b2"
+  integrity sha512-8d35hViGYx/QH0icHYCeLmsLmMUheMmTyV9Fcm6gvNwdw31yXXH+O85sOBJ+OLnLQMKZowvpKb6FgMIQjcpvQw==
+
 debounce-fn@^4.0.0:
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/debounce-fn/-/debounce-fn-4.0.0.tgz#ed76d206d8a50e60de0dd66d494d82835ffe61c7"
@@ -6714,6 +6719,11 @@ faker@^5.3.1:
   version "5.5.3"
   resolved "https://registry.yarnpkg.com/faker/-/faker-5.5.3.tgz#c57974ee484431b25205c2c8dc09fda861e51e0e"
   integrity sha512-wLTv2a28wjUyWkbnX7u/ABZBkUkIF2fCd73V6P2oFqEGEktDfzWx4UxrSqtPRw0xPRAcjeAOIiJWqZm3pP4u3g==
+
+fancy-canvas@0.2.2:
+  version "0.2.2"
+  resolved "https://registry.yarnpkg.com/fancy-canvas/-/fancy-canvas-0.2.2.tgz#33fd4976724169a1eda5015f515a2a1302d1ec91"
+  integrity sha512-50qi8xA0QkHbjmb8h7XQ6k2fvD7y/yMfiUw9YTarJ7rWrq6o5/3CCXPouYk+XSLASvvxtjyiQLRBFt3qkE3oyA==
 
 fast-check@^2.12.1:
   version "2.20.0"
@@ -9033,6 +9043,13 @@ libp2p-crypto@^0.19.0:
     secp256k1 "^4.0.0"
     uint8arrays "^3.0.0"
     ursa-optional "^0.10.1"
+
+lightweight-charts@^3.7.0:
+  version "3.7.0"
+  resolved "https://registry.yarnpkg.com/lightweight-charts/-/lightweight-charts-3.7.0.tgz#2be03fb9a1296bbe9804b386d8d9270de9d3ea1e"
+  integrity sha512-OFPdU4kRtgqHrzi+O86MxBPwbbMsdKRiAQm5nM14/iwN7BJRqWmrdT7uCGnP6+pU8rm3sxjZwMyL8dX0eaQnvQ==
+  dependencies:
+    fancy-canvas "0.2.2"
 
 lilconfig@^2.0.3:
   version "2.0.4"
@@ -13542,11 +13559,6 @@ use-subscription@1.5.1:
   integrity sha512-Xv2a1P/yReAjAbhylMfFplFKj9GssgTwN7RlcTxBujFQcloStWNDQdc4g4NRWH9xS4i/FDk04vQBptAXoF3VcA==
   dependencies:
     object-assign "^4.1.1"
-
-use-sync-external-store@^1.0.0-rc.0:
-  version "1.0.0-rc.0-next-f2a59df48-20211208"
-  resolved "https://registry.yarnpkg.com/use-sync-external-store/-/use-sync-external-store-1.0.0-rc.0-next-f2a59df48-20211208.tgz#37722e217cbc981989ce94af39db7a0d22ae895b"
-  integrity sha512-VEt6i7C9wGmfI7GNsIdaTALazrgOSvWc+tFZRDOGzh6AugKx7HtKNGV0eS8Axwg+GlvvHv9ILbsmPX55JT630Q==
 
 utf-8-validate@^5.0.2:
   version "5.0.7"
