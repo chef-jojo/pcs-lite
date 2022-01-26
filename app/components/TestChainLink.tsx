@@ -53,6 +53,7 @@ function TestChainLink() {
   const computedData = useMemo(() => {
     return (
       data
+        // @ts-ignore
         ?.map(({ answer, roundId, startedAt }, i) => {
           return {
             answer: parseFloat(formatBigNumberToFixed(answer, 3, 8)),
@@ -66,7 +67,7 @@ function TestChainLink() {
   }, [data]);
 
   useEffect(() => {
-    const data = computedData.map((d) => ({
+    const data = computedData.map((d: any) => ({
       time: d.startedAt,
       value: d.answer,
     }));
